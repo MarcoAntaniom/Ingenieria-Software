@@ -51,6 +51,11 @@ INSTALLED_APPS = [
     'django_filters',
     'storages',
     'drf_spectacular',
+    'apps.usuarios.apps.UsuariosConfig',
+    'apps.academico.apps.AcademicoConfig',
+    'apps.evaluaciones.apps.EvaluacionesConfig',
+    'apps.comunicacion.apps.ComunicacionConfig',
+    'apps.archivos.apps.ArchivosConfig',
 ]
 
 MIDDLEWARE = [
