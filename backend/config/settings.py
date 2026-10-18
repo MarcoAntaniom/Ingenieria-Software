@@ -123,7 +123,7 @@ STORAGES = {
 REST_FRAMEWORK = {
     # Autenticación global por JWT
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps.usuarios.authentication.UsuarioJWTAuthentication',
     ),
     # Permiso base: los endpoints requieren estar autenticado por defecto
     'DEFAULT_PERMISSION_CLASSES': (

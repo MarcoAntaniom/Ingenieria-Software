@@ -36,6 +36,14 @@ class Usuarios(models.Model):
     def __str__(self):
         return f"{self.nombres} {self.apellidos} ({self.rut})"
 
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
 class PerfilEstudiante(models.Model):
     # Tabla perfiles_estudiante
     usuario = models.OneToOneField(Usuarios, on_delete=models.CASCADE, related_name='perfil_estudiante')
