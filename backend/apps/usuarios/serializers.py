@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import make_password
 from .models import *
 
 class RolSerializer(serializers.ModelSerializer):
@@ -9,11 +10,31 @@ class RolSerializer(serializers.ModelSerializer):
         fields = ['id', 'nombre', 'codigo']
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    # Permite crear usuarios.
+    rol_id = serializers.PrimaryKeyRelatedField(
+        queryset = Roles.objects.all(),
+        source = 'rol',
+        write_only=True
+    )
+
+    password_hash = serializers.CharField(
+        write_only=True,
+        required=True
+    )
+
     rol = RolSerializer(read_only=True)
 
     class Meta:
         model = Usuarios
-        fields = ['id', 'rut', 'nombres', 'apellidos', 'correo_institucional', 'rol', 'activo']
+        fields = ['id', 'rut', 'nombres', 'apellidos', 'correo_institucional', 'password_hash', 'rol_id', 'rol', 'activo']
+
+    # Método para hashear la password.
+    def create(self, validated_data):
+        validated_data['password_hash'] = make_password(
+            validated_data['password_hash']
+        )
+
+        return Usuarios.objects.create(**validated_data)
 
 class LoginSerializer(serializers.Serializer):
     correo_institucional = serializers.EmailField()
