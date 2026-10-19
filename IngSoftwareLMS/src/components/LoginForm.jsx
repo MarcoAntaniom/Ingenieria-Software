@@ -1,4 +1,5 @@
 import { useState } from 'react'
+// Mantiene la comunicación HTTP fuera del componente visual.
 import { loginUsuario } from '../services/api.js'
 
 function LoginForm() {
@@ -27,6 +28,7 @@ function LoginForm() {
   // Valida los campos y muestra el resultado de la petición al backend.
   async function handleSubmit(event) {
     event.preventDefault()
+    // Evita enviar la solicitud si falta alguna credencial.
     if (!email || !password) {
       setStatus({
         type: 'error',
@@ -35,10 +37,12 @@ function LoginForm() {
       return
     }
 
+    // Activa el indicador de carga y limpia mensajes anteriores.
     setIsLoading(true)
     setStatus(null)
 
     try {
+      // El servicio responde solo si el backend acepta las credenciales.
       await loginUsuario(email, password)
       const firstName = email.split('.')[0] || 'Usuario'
       const formattedName =
@@ -48,6 +52,7 @@ function LoginForm() {
         text: `¡Acceso concedido, ${formattedName}! Abriendo tus cursos...`,
       })
     } catch (error) {
+      // Presenta el mensaje de error devuelto por el servicio.
       setStatus({
         type: 'error',
         text:
@@ -56,6 +61,7 @@ function LoginForm() {
             : 'Error de conexión. Inténtalo de nuevo.',
       })
     } finally {
+      // Restablece el botón tanto si la autenticación resulta exitosa como si falla.
       setIsLoading(false)
     }
   }
