@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { loginUsuario } from '../services/api.js'
 
 function LoginForm() {
   // Mantiene los valores del formulario y sus estados de interacción.
@@ -23,8 +24,8 @@ function LoginForm() {
     })
   }
 
-  // Valida los campos y simula una respuesta de inicio de sesión.
-  function handleSubmit(event) {
+  // Valida los campos y muestra el resultado de la petición al backend.
+  async function handleSubmit(event) {
     event.preventDefault()
     if (!email || !password) {
       setStatus({
@@ -37,16 +38,26 @@ function LoginForm() {
     setIsLoading(true)
     setStatus(null)
 
-    window.setTimeout(() => {
-      setIsLoading(false)
+    try {
+      await loginUsuario(email, password)
       const firstName = email.split('.')[0] || 'Usuario'
       const formattedName =
         firstName.charAt(0).toUpperCase() + firstName.slice(1)
       setStatus({
         type: 'success',
-        text: `¡Bienvenido de vuelta, ${formattedName}! Abriendo tus cursos...`,
+        text: `¡Acceso concedido, ${formattedName}! Abriendo tus cursos...`,
       })
-    }, 1200)
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Error de conexión. Inténtalo de nuevo.',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
