@@ -8,4 +8,6 @@ urlpatterns = [
     path('create/', view=UsuarioView.as_view(), name='create'),
     path('update/<int:pk>/', view=UsuarioView.as_view(), name='update'),
     path('refresh/', view=CustomTokenRefreshView.as_view(), name='token_refresh'),
+    path('student-profile/', view=PerfilEstudianteView.as_view(), name='student-profile'),
+    path('teacher-profile/', view=PerfilDocenteView.as_view(), name='teacher-profile'),
 ]

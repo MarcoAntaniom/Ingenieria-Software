@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Usuarios
-from .serializers import LoginSerializer, UsuarioSerializer
+from .serializers import LoginSerializer, UsuarioSerializer, PerfilEstudianteSerializer, PerfilDocenteSerializer
 
 # Vistas de los usuarios.
 
@@ -157,6 +157,74 @@ class UsuarioView(APIView):
         return Response(
             {
                 "mensaje": "Error al actualizar el usuario",
+                "error": serializer.errors
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+class PerfilEstudianteView(APIView):
+    
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # Si no es Administrador le niega la entrada.
+        if request.user.rol.id != 1:
+            return Response (
+                {
+                    "mensaje": "Permiso denegado"
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        serializer = PerfilEstudianteSerializer(data=request.data)
+
+        if serializer.is_valid():
+            perfil_estudiante = serializer.save()
+
+            return Response(
+                {
+                    "mensaje": "Perfil creado exitosamente",
+                    "perfil_estudiante": PerfilEstudianteSerializer(perfil_estudiante).data
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(
+            {
+                "mensaje": "Error al crear el perfil del estudiante",
+                "error": serializer.errors
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+class PerfilDocenteView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.rol.id != 1:
+            return Response (
+                {
+                    "mensaje": "Permiso denegado"
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        serializer = PerfilDocenteSerializer(data=request.data)
+
+        if serializer.is_valid():
+            perfil_docente = serializer.save()
+
+            return Response(
+                {
+                    "mensaje": "Perfil creado exitosamente",
+                    "perfil_docente": PerfilDocenteSerializer(perfil_docente).data
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(
+            {
+                "mensaje": "Error al crear el perfil del docente",
                 "error": serializer.errors
             },
             status=status.HTTP_400_BAD_REQUEST

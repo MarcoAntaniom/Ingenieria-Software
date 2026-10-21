@@ -67,3 +67,14 @@ class LoginSerializer(serializers.Serializer):
             'access': str(refresh.access_token),
             'usuario': UsuarioSerializer(usuario).data # Reutiliza el UsuarioSerializer para devolver un perfil limpio.
         }
+
+
+class PerfilEstudianteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PerfilEstudiante
+        fields = ['id', 'usuario', 'carrera', 'nivel', 'anio_ingreso']
+
+class PerfilDocenteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PerfilDocente
+        fields = ["id", "usuario", "especialidad", "departamento"]
