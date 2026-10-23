@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import api from './api';
+import api from '../services/api';
 
 // Envía las credenciales al endpoint de autenticación del backend.
 async function loginUsuario(email, password) {
