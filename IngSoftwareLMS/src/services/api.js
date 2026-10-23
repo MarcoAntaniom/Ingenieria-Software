@@ -1,55 +1,50 @@
 import axios from 'axios'
 
-// Dirección base de la API usada por los servicios del frontend.
-const API_BASE_URL = 'http://localhost:8000/api/v1'
+// 1. Crear la instancia base
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/',
+});
 
-// Envía las credenciales al endpoint de autenticación del backend.
-export async function loginUsuario(email, password) {
-  try {
-    // Axios serializa las credenciales como JSON y devuelve el cuerpo en response.data.
-    const response = await axios.post(`${API_BASE_URL}/usuarios/login/`, {
-      email,
-      password,
-    })
-
-    return response.data
-  } catch (error) {
-    // Convierte los errores de Axios en mensajes que el formulario pueda mostrar.
-    if (axios.isAxiosError(error)) {
-      const responseData = error.response?.data
-      // Admite los formatos habituales de error que pueden responder distintas APIs.
-      const responseMessage =
-        typeof responseData === 'string'
-          ? responseData
-          : responseData && typeof responseData === 'object'
-            ? responseData.detail ||
-              responseData.message ||
-              responseData.non_field_errors?.[0] ||
-              Object.values(responseData)
-                .flat()
-                .find((value) => typeof value === 'string')
-            : null
-
-      // Prioriza el mensaje enviado por el backend cuando está disponible.
-      if (typeof responseMessage === 'string') {
-        throw new Error(responseMessage, { cause: error })
-      }
-
-      // Distingue los fallos de conexión de las respuestas HTTP de error.
-      if (!error.response) {
-        throw new Error(
-          'No se pudo conectar con el servidor. Verifica que el backend esté activo.',
-          { cause: error },
-        )
-      }
-    }
-
-    // Conserva el mensaje original para errores que no sean respuestas de Axios.
-    throw new Error(
-      error instanceof Error
-        ? error.message
-        : 'No se pudo iniciar sesión. Inténtalo de nuevo.',
-      { cause: error },
-    )
+// 2. Interceptor de Petición: Inyectar Access Token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-}
+  return config;
+}, (error) => Promise.reject(error));
+
+// 3. Interceptor de Respuesta: Rotación de Refresh Token
+api.interceptors.response.use((response) => response, async (error) => {
+  const originalRequest = error.config;
+
+  // Si da error 401 (Unauthorized) y no es un reintento previo
+  if (error.response?.status === 401 && !originalRequest._retry) {
+    originalRequest._retry = true;
+    
+    try {
+      const refreshToken = localStorage.getItem('refresh');
+      // Hacer petición al endpoint de refresco
+      const { data } = await axios.post('http://localhost:8000/api/v1/usuarios/refresh/', {
+        refresh: refreshToken
+      });
+      
+      // Guardar el nuevo access token y actualizar la cabecera
+      localStorage.setItem('access', data.access);
+      originalRequest.headers.Authorization = `Bearer ${data.access}`;
+      
+      // Disparar nuevamente la petición original que había fallado
+      return api(originalRequest);
+    } catch (refreshError) {
+      // Si el refresh token también expiró, limpiar sesión y redirigir al login
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      window.location.href = '/login';
+      return Promise.reject(refreshError);
+    }
+  }
+  
+  return Promise.reject(error);
+});
+
+export default api;
