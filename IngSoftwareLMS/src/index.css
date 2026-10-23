@@ -1,0 +1,44 @@
+/* Carga Tailwind y su configuración personalizada del proyecto. */
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* Define la tipografía y apariencia general de la página. */
+:root {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #0f172a;
+  background: #f5f8fa;
+}
+
+/* Asegura que la aplicación ocupe al menos el alto de la ventana. */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Permite que la raíz de React se extienda a toda la pantalla. */
+#root {
+  min-height: 100vh;
+}
+
+/* Configura la fuente de iconos Material Symbols usada en la interfaz. */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
