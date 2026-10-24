@@ -1,5 +1,5 @@
 from django.db import models
-
+from .validators import validar_tamanio_archivo, validador_extensiones
 # Modelos para academico
 
 class Carrera(models.Model):
@@ -110,3 +110,24 @@ class Inscripcion(models.Model):
 
     def __str__(self):
         return f"{self.estudiante} - {self.seccion}"
+
+
+class EntregaAcademica(models.Model):
+    # Campos principales según las historias de usuario y requerimientos
+    titulo = models.CharField(max_length=255, verbose_name="Título de la Entrega")
+    
+    # Campo de archivo con las restricciones aplicadas
+    archivo = models.FileField(
+        upload_to='academico/entregas/',
+        validators=[validador_extensiones, validar_tamanio_archivo],
+        verbose_name="Archivo adjunto"
+    )
+    
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de subida")
+
+    class Meta:
+        verbose_name = "Entrega Académica"
+        verbose_name_plural = "Entregas Académicas"
+
+    def __str__(self):
+        return f"{self.titulo} - {self.archivo.name}"
