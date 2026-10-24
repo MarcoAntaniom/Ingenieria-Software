@@ -23,6 +23,18 @@ export default {
         'text-primary': '#0F172A',
         'canvas-bg': '#f5f8fa',
         'surface-card': '#FFFFFF',
+        surface: '#f8f9ff',
+        card: '#FFFFFF',
+        subtle: '#F1F5F9',
+        line: '#E2E8F0',
+        ink: '#0F172A',
+        muted: '#64748B',
+        danger: '#EF4444',
+        'danger-soft': '#FEE2E2',
+        'primary-container': '#104c64',
+        'secondary-container': '#8cf5e4',
+        'secondary-fixed': '#8cf5e4',
+        'on-secondary-container': '#007166',
       },
       // Configura la fuente principal del diseño.
       fontFamily: {
