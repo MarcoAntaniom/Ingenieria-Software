@@ -179,8 +179,10 @@ if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 else:
     CORS_ALLOWED_ORIGINS = [
-        # "https://tu-frontend.vercel.app",
+        env.list('CORS_ALLOWED_ORIGINS'),
     ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
