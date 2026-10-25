@@ -147,7 +147,7 @@ function Dashboard() {
         if (active) {
           setLoadError(
             error.response?.data?.detail ||
-              'No se pudieron cargar tus cursos. Comprueba que el backend esté activo.',
+              'No se pudieron cargar tus cursos.',
           )
         }
       })

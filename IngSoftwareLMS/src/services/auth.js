@@ -37,24 +37,28 @@ export async function loginWithCredentials(email, password) {
       password,
     })
 
+    const payload = data?.datos || data
+    const access = payload?.access
+    const refresh = payload?.refresh
+
     if (
-      typeof data?.access !== 'string' ||
-      !data.access ||
-      typeof data?.refresh !== 'string' ||
-      !data.refresh
+      typeof access !== 'string' ||
+      !access ||
+      typeof refresh !== 'string' ||
+      !refresh
     ) {
       throw new Error(
         'La respuesta del servidor no contiene los tokens de sesión requeridos.',
       )
     }
 
-    const returnedUser = data.user ?? data.usuario
+    const returnedUser = payload?.usuario ?? payload?.user
     const user =
       returnedUser && typeof returnedUser === 'object' && !Array.isArray(returnedUser)
         ? returnedUser
         : { correo_institucional: email.trim() }
 
-    saveSession({ access: data.access, refresh: data.refresh, user })
+    saveSession({ access: access, refresh: refresh, user })
     return user
   } catch (error) {
     clearSession()

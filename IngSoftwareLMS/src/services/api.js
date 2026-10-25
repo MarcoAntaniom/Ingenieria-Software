@@ -9,7 +9,7 @@ import {
 export const SESSION_EXPIRED_EVENT = 'lms:session-expired'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1/',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/',
   timeout: 15000,
 })
 
