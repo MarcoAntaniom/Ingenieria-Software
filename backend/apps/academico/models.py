@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import models
 from .validators import validar_tamanio_archivo, validador_extensiones
 # Modelos para academico
@@ -131,3 +132,54 @@ class EntregaAcademica(models.Model):
 
     def __str__(self):
         return f"{self.titulo} - {self.archivo.name}"
+
+
+class AnuncioAcademico(models.Model):
+    titulo = models.CharField(max_length=200, verbose_name="Título del aviso")
+    contenido = models.TextField(verbose_name="Mensaje o comunicado")
+    autor = models.ForeignKey("usuarios.Usuarios", on_delete=models.CASCADE, verbose_name="Publicado por")
+    fecha_publicacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de publicación")
+    
+    # Opcional: para dirigir el anuncio a un curso o sección específica
+    dirigido_a = models.CharField(max_length=100, blank=True, null=True, verbose_name="Curso / Sección")
+
+    class Meta:
+        verbose_name = "Anuncio Académico"
+        verbose_name_plural = "Tablón de Anuncios"
+        ordering = ['-fecha_publicacion'] # Los más recientes primero
+
+    def __str__(self):
+        return f"{self.titulo} ({self.fecha_publicacion.strftime('%d/%m/%Y')})"
+
+
+class Tarea(models.Model):
+    titulo = models.CharField(max_length=200, verbose_name="Título de la Tarea")
+    fecha_cierre = models.DateTimeField(verbose_name="Fecha límite oficial")
+    permite_atrasados = models.BooleanField(default=False, verbose_name="¿Permite entregas fuera de plazo?")
+
+    def __str__(self):
+        return self.titulo
+
+
+class EntregaTarea(models.Model):
+    tarea = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name="entregas")
+    estudiante = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Estudiante")
+    archivo = models.FileField(upload_to='academico/tareas/', verbose_name="Archivo adjunto")
+    fecha_envio = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de envío")
+    es_fuera_de_plazo = models.BooleanField(default=False, verbose_name="Entregado fuera de plazo")
+
+    class Meta:
+        verbose_name = "Entrega de Tarea"
+        verbose_name_plural = "Entregas de Tareas"
+
+    def save(self, *args, **kwargs):
+        # Evaluar automáticamente si la entrega ocurre después de la fecha de cierre
+        if self.tarea.fecha_cierre:
+            ahora = timezone.now()
+            if ahora > self.tarea.fecha_cierre:
+                if not self.tarea.permite_atrasados:
+                    raise ValueError("El plazo de entrega ha expirado y esta tarea no acepta envíos fuera de plazo.")
+                self.es_fuera_de_plazo = True
+            else:
+                self.es_fuera_de_plazo = False
+        super().save(*args, **kwargs)
