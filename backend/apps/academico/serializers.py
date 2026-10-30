@@ -141,7 +141,7 @@ class EntregaAcademicaSerializer(serializers.ModelSerializer):
         fields = ['id', 'titulo', 'archivo', 'fecha_creacion']
 
 
-# --- NUEVOS SERIALIZADORES PARA TAREAS Y ENTREGAS CON BORRADOR ---
+# --- SERIALIZADORES PARA TAREAS Y ENTREGAS CON BORRADOR ---
 
 class TareaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -154,7 +154,6 @@ class EntregaTareaSerializer(serializers.ModelSerializer):
         validators=[validador_extensiones, validar_tamanio_archivo],
         required=False
     )
-    # Opcional: mostrar representación anidada de la tarea en lectura
     tarea_detalles = TareaSerializer(source='tarea', read_only=True)
 
     class Meta:
@@ -180,3 +179,9 @@ class EntregaTareaSerializer(serializers.ModelSerializer):
             'fecha_envio_definitivo', 
             'es_fuera_de_plazo'
         ]
+
+    def validate(self, data):
+        # Si la instancia ya existe y su estado es ENVIADO, bloquear cualquier cambio posterior
+        if self.instance and self.instance.estado == EntregaTarea.EstadoEntrega.ENVIADO:
+            raise serializers.ValidationError("Esta entrega ya fue enviada definitivamente y no puede ser modificada.")
+        return data

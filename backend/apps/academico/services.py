@@ -23,25 +23,33 @@ def guardar_borrador_entrega(tarea, estudiante, archivo=None, comentario=None):
 
 
 def confirmar_envio_definitivo(entrega_id, estudiante):
-    """Cambia el estado de BORRADOR a ENVIADO y registra la fecha oficial."""
-    entrega = EntregaTarea.objects.get(id=entrega_id, estudiante=estudiante)
+    """
+    Realiza la entrega definitiva, asignando el timestamp exacto 
+    y validando los plazos correspondientes.
+    """
+    try:
+        entrega = EntregaTarea.objects.get(id=entrega_id, estudiante=estudiante)
+    except EntregaTarea.DoesNotExist:
+        raise ValidationError("La entrega o borrador no existe.")
 
     if entrega.estado == EntregaTarea.EstadoEntrega.ENVIADO:
-        raise ValidationError("Esta entrega ya fue confirmada previamente.")
+        raise ValidationError("Esta tarea ya cuenta con una entrega definitiva registrada.")
 
     if not entrega.archivo:
-        raise ValidationError("Debes subir un archivo válido antes de confirmar el envío.")
+        raise ValidationError("No se puede realizar una entrega definitiva sin adjuntar un archivo.")
 
     ahora = timezone.now()
     tarea = entrega.tarea
 
-    # Validar plazo de la tarea
-    if ahora > tarea.fecha_cierre:
+    # Validar si superó la fecha límite oficial
+    if tarea.fecha_cierre and ahora > tarea.fecha_cierre:
         if not tarea.permite_atrasados:
-            raise ValidationError("El plazo ha expirado y la tarea no acepta entregas fuera de plazo.")
+            raise ValidationError("El plazo de entrega ha expirado y la tarea no acepta envíos fuera de plazo.")
         entrega.es_fuera_de_plazo = True
 
+    # Cambiar estado y estampar el timestamp oficial
     entrega.estado = EntregaTarea.EstadoEntrega.ENVIADO
     entrega.fecha_envio_definitivo = ahora
     entrega.save()
+
     return entrega

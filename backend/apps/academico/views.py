@@ -24,7 +24,7 @@ from .serializers import (
     PeriodoAcademicoSerializer,
     SeccionDocenteSerializer,
     SeccionSerializer,
-    EntregaTareaSerializer,  # <-- Agregado para evitar errores de importación
+    EntregaTareaSerializer,
 )
 from .services import guardar_borrador_entrega, confirmar_envio_definitivo
 
@@ -155,7 +155,20 @@ class EntregaTareaViewSet(viewsets.ModelViewSet):
     def confirmar_envio(self, request, pk=None):
         try:
             entrega = confirmar_envio_definitivo(entrega_id=pk, estudiante=request.user)
-            serializer = self.get_serializer(entrega)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+            # Estructura del Comprobante con Timestamp para el Frontend / Estudiante
+            comprobante = {
+                "mensaje": "¡Entrega definitiva realizada con éxito!",
+                "comprobante": {
+                    "id_entrega": entrega.id,
+                    "tarea": entrega.tarea.titulo,
+                    "estudiante": request.user.get_full_name() or request.user.username,
+                    "archivo": entrega.archivo.name if entrega.archivo else None,
+                    "estado": entrega.estado,
+                    "timestamp_oficial": entrega.fecha_envio_definitivo.isoformat(), # Marca de tiempo exacta
+                    "es_fuera_de_plazo": entrega.es_fuera_de_plazo
+                }
+            }
+            return Response(comprobante, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
