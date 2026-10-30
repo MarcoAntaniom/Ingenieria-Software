@@ -173,7 +173,7 @@ class EntregaTarea(models.Model):
         ENVIADO = 'ENVIADO', 'Enviado'
 
     tarea = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name="entregas")
-    estudiante = models.ForeignKey(User, on_date=models.CASCADE, verbose_name="Estudiante") # type: ignore
+    estudiante = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Estudiante") # type: ignore
     
     # El archivo usa los validadores de extensión y tamaño (50 MB), y puede ser nulo en estado BORRADOR
     archivo = models.FileField(
