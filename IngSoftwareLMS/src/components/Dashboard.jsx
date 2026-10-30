@@ -127,7 +127,7 @@ function Dashboard() {
     let active = true
 
     api
-      .get('academico/cursos/')
+      .get('academico/secciones/')
       .then(({ data }) => {
         const rows = data?.datos ?? data?.results
         if (!Array.isArray(rows)) {
