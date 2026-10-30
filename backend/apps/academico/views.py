@@ -1,7 +1,8 @@
 from django.shortcuts import render
-
-# Create your views here.
-from rest_framework import generics, permissions
+from rest_framework import status, viewsets, generics, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from .models import (
     Asignatura,
@@ -12,6 +13,7 @@ from .models import (
     PeriodoAcademico,
     Seccion,
     SeccionDocente,
+    EntregaTarea,
 )
 from .serializers import (
     AsignaturaSerializer,
@@ -22,7 +24,9 @@ from .serializers import (
     PeriodoAcademicoSerializer,
     SeccionDocenteSerializer,
     SeccionSerializer,
+    EntregaTareaSerializer,  # <-- Agregado para evitar errores de importación
 )
+from .services import guardar_borrador_entrega, confirmar_envio_definitivo
 
 
 class CarreraListCreateView(generics.ListCreateAPIView):
@@ -119,3 +123,39 @@ class InscripcionDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Inscripcion.objects.select_related('seccion', 'estudiante', 'estado').all()
     serializer_class = InscripcionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class EntregaTareaViewSet(viewsets.ModelViewSet):
+    serializer_class = EntregaTareaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Los estudiantes solo ven sus propias entregas/borradores
+        return EntregaTarea.objects.filter(estudiante=self.request.user)
+
+    @action(detail=False, methods=['post'], url_path='guardar-borrador')
+    def guardar_borrador(self, request):
+        tarea_id = request.data.get('tarea')
+        archivo = request.FILES.get('archivo')
+        comentario = request.data.get('comentario_estudiante', '')
+
+        try:
+            borrador = guardar_borrador_entrega(
+                tarea_id=tarea_id,
+                estudiante=request.user,
+                archivo=archivo,
+                comentario=comentario
+            )
+            serializer = self.get_serializer(borrador)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='confirmar-envio')
+    def confirmar_envio(self, request, pk=None):
+        try:
+            entrega = confirmar_envio_definitivo(entrega_id=pk, estudiante=request.user)
+            serializer = self.get_serializer(entrega)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
