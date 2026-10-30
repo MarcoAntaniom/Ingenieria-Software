@@ -10,8 +10,10 @@ from .models import (
     PeriodoAcademico,
     Seccion,
     SeccionDocente,
+    Tarea,
+    EntregaTarea,
+    EntregaAcademica,
 )
-from .models import EntregaAcademica
 from .validators import validar_tamanio_archivo, validador_extensiones
 
 
@@ -130,9 +132,56 @@ class InscripcionSerializer(serializers.ModelSerializer):
             'creado_en',
         ]
 
+
 class EntregaAcademicaSerializer(serializers.ModelSerializer):
     archivo = serializers.FileField(validators=[validador_extensiones, validar_tamanio_archivo])
 
     class Meta:
         model = EntregaAcademica
         fields = ['id', 'titulo', 'archivo', 'fecha_creacion']
+
+
+# --- SERIALIZADORES PARA TAREAS Y ENTREGAS CON BORRADOR ---
+
+class TareaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tarea
+        fields = ['id', 'titulo', 'descripcion', 'fecha_cierre', 'permite_atrasados']
+
+
+class EntregaTareaSerializer(serializers.ModelSerializer):
+    archivo = serializers.FileField(
+        validators=[validador_extensiones, validar_tamanio_archivo],
+        required=False
+    )
+    tarea_detalles = TareaSerializer(source='tarea', read_only=True)
+
+    class Meta:
+        model = EntregaTarea
+        fields = [
+            'id', 
+            'tarea', 
+            'tarea_detalles', 
+            'estudiante', 
+            'archivo', 
+            'estado',
+            'comentario_estudiante', 
+            'fecha_envio',
+            'fecha_modificacion',
+            'fecha_envio_definitivo', 
+            'es_fuera_de_plazo'
+        ]
+        read_only_fields = [
+            'estudiante', 
+            'estado', 
+            'fecha_envio',
+            'fecha_modificacion', 
+            'fecha_envio_definitivo', 
+            'es_fuera_de_plazo'
+        ]
+
+    def validate(self, data):
+        # Si la instancia ya existe y su estado es ENVIADO, bloquear cualquier cambio posterior
+        if self.instance and self.instance.estado == EntregaTarea.EstadoEntrega.ENVIADO:
+            raise serializers.ValidationError("Esta entrega ya fue enviada definitivamente y no puede ser modificada.")
+        return data

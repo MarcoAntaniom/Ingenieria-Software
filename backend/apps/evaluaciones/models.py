@@ -1,5 +1,6 @@
 from django.db import models
-
+from django.contrib.auth.models import User
+from django.utils import timezone
 # Modelos para evaluaciones.
 
 class Rubrica(models.Model):
@@ -120,3 +121,36 @@ class EvaluacionCriterio(models.Model):
         db_table = 'evaluaciones_criterio'
         verbose_name = 'EvaluacionCriterio'
         verbose_name_plural = 'EvaluacionesCriterios'
+
+
+class Evaluacion(models.Model):
+    titulo = models.CharField(max_length=200, verbose_name="Título de la Evaluación")
+    descripcion = models.TextField(verbose_name="Descripción")
+    intentos_permitidos = models.PositiveIntegerField(default=1, verbose_name="Intentos permitidos")
+    fecha_inicio = models.DateTimeField(verbose_name="Fecha de apertura")
+    fecha_cierre = models.DateTimeField(verbose_name="Fecha de cierre")
+
+    class Meta:
+        verbose_name = "Evaluación"
+        verbose_name_plural = "Evaluaciones"
+
+    def __str__(self):
+        return self.titulo
+
+
+class IntentoEvaluacion(models.Model):
+    evaluacion = models.ForeignKey(Evaluacion, on_delete=models.CASCADE, related_name="intentos")
+    estudiante = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Estudiante")
+    numero_intento = models.PositiveIntegerField(verbose_name="Número de intento")
+    fecha_inicio_intento = models.DateTimeField(auto_now_add=True, verbose_name="Inicio del intento")
+    fecha_envio = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de envío")
+    calificacion = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Calificación")
+    completado = models.BooleanField(default=False, verbose_name="¿Completado?")
+
+    class Meta:
+        verbose_name = "Intento de Evaluación"
+        verbose_name_plural = "Intentos de Evaluaciones"
+        ordering = ['-numero_intento']
+
+    def __str__(self):
+        return f"{self.evaluacion.titulo} - {self.estudiante.username} (Intento {self.numero_intento})"
