@@ -178,9 +178,11 @@ SPECTACULAR_SETTINGS = {
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    CORS_ALLOWED_ORIGINS = [
-        # "https://tu-frontend.vercel.app",
-    ]
+    CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
+        'https://ingenieria-software.pages.dev',
+    ])
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
