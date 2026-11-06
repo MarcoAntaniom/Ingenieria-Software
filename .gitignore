@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+IngSoftwareLMS/node_modules/
+IngSoftwareLMS/dist/
