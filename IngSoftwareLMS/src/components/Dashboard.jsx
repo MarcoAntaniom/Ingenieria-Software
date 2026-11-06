@@ -136,8 +136,21 @@ function Dashboard() {
         }
         if (active) {
           setCourses(
-            rows.map((course, index) => ({
-              ...course,
+            rows.map((row, index) => ({
+              ...row,
+              title:
+                row.seccion?.asignatura?.nombre ||
+                row.asignatura_nombre ||
+                'Asignatura sin nombre',
+              code:
+                row.seccion?.asignatura?.codigo ||
+                row.codigo_asignatura ||
+                'S/C',
+              section: row.seccion?.numero_seccion || row.seccion || 1,
+              period:
+                row.seccion?.periodo_academico?.codigo ||
+                row.periodo ||
+                'Activo',
               colors: COURSE_COLORS[index % COURSE_COLORS.length],
             })),
           )
