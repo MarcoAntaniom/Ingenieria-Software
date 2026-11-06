@@ -119,9 +119,25 @@ class SeccionDocenteDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class InscripcionListCreateView(generics.ListCreateAPIView):
-    queryset = Inscripcion.objects.select_related('seccion', 'estudiante', 'estado').all().order_by('id')
     serializer_class = InscripcionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        usuario = self.request.user
+        qs = Inscripcion.objects.select_related(
+            'seccion__asignatura', 
+            'seccion__periodo_academico', 
+            'estudiante', 
+            'estado'
+        )
+        
+        # Si el usuario conectado es estudiante, retorna únicamente sus inscripciones
+        if hasattr(usuario, 'perfil_estudiante'):
+            return qs.filter(estudiante=usuario.perfil_estudiante).order_by('id')
+            
+        # Comportamiento por defecto (ej. para un Administrador)
+        return qs.all().order_by('id')
+
 
 
 class InscripcionDetailView(generics.RetrieveUpdateDestroyAPIView):
