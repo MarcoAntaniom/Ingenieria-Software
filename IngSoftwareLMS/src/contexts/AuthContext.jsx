@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { refreshAccessToken, SESSION_EXPIRED_EVENT } from '../services/api'
-import { getRefreshToken, getStoredUser } from '../services/session'
+import { clearSession, getRefreshToken } from '../services/session'
 import {
+  fetchCurrentUser,
   loginWithCredentials,
   logout as revokeLoginSession,
 } from '../services/auth'
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => getStoredUser())
+  const [user, setUser] = useState(null)
+  const [authNotice, setAuthNotice] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isInitializing, setIsInitializing] = useState(() =>
     Boolean(getRefreshToken()),
@@ -20,6 +22,7 @@ export function AuthProvider({ children }) {
     function handleSessionExpired() {
       setIsAuthenticated(false)
       setUser(null)
+      setAuthNotice('La sesión expiró. Inicia sesión nuevamente.')
       setIsInitializing(false)
     }
 
@@ -27,16 +30,21 @@ export function AuthProvider({ children }) {
 
     if (getRefreshToken()) {
       refreshAccessToken()
-        .then(() => {
+        .then(fetchCurrentUser)
+        .then((authenticatedUser) => {
           if (active) {
-            setUser(getStoredUser())
+            setUser(authenticatedUser)
             setIsAuthenticated(true)
           }
         })
         .catch(() => {
+          clearSession()
           if (active) {
             setUser(null)
             setIsAuthenticated(false)
+            setAuthNotice(
+              'No se pudo reanudar la sesión. Inicia sesión nuevamente.',
+            )
           }
         })
         .finally(() => {
@@ -54,6 +62,8 @@ export function AuthProvider({ children }) {
     const authenticatedUser = await loginWithCredentials(email, password)
     setUser(authenticatedUser)
     setIsAuthenticated(true)
+    setAuthNotice('')
+    return authenticatedUser
   }
 
   async function signOut() {
@@ -65,9 +75,21 @@ export function AuthProvider({ children }) {
     }
   }
 
+  function clearAuthNotice() {
+    setAuthNotice('')
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated, isInitializing, login, signOut }}
+      value={{
+        user,
+        authNotice,
+        clearAuthNotice,
+        isAuthenticated,
+        isInitializing,
+        login,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>
