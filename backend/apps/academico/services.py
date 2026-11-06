@@ -92,3 +92,30 @@ def calcular_penalizacion_calificacion(entrega_id, calificacion_obtenida):
 
     entrega.save()
     return entrega
+
+def cambiar_estado_revision(entrega_id, docente):
+    """Permite al docente marcar la entrega como 'En revisión'."""
+    try:
+        entrega = EntregaTarea.objects.get(id=entrega_id)
+    except EntregaTarea.DoesNotExist:
+        raise ValidationError("La entrega no existe.")
+
+    if entrega.estado != EntregaTarea.EstadoEntrega.ENVIADO:
+        raise ValidationError("Solo se pueden revisar entregas que hayan sido enviadas definitivamente.")
+
+    entrega.estado = EntregaTarea.EstadoEntrega.EN_REVISION
+    entrega.save()
+    return entrega
+
+
+def reabrir_entrega(entrega_id, docente):
+    """Reabre la entrega para que el estudiante pueda modificar su archivo o corregir."""
+    try:
+        entrega = EntregaTarea.objects.get(id=entrega_id)
+    except EntregaTarea.DoesNotExist:
+        raise ValidationError("La entrega no existe.")
+
+    # Cambia de estado a REABIERTA permitiendo edición nuevamente
+    entrega.estado = EntregaTarea.EstadoEntrega.REABIERTAS
+    entrega.save()
+    return entrega

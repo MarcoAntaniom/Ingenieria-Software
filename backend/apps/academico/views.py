@@ -26,7 +26,12 @@ from .serializers import (
     SeccionSerializer,
     EntregaTareaSerializer,
 )
-from .services import guardar_borrador_entrega, confirmar_envio_definitivo
+from .services import (
+    guardar_borrador_entrega, 
+    confirmar_envio_definitivo, 
+    cambiar_estado_revision, 
+    reabrir_entrega
+)
 
 
 class CarreraListCreateView(generics.ListCreateAPIView):
@@ -130,8 +135,12 @@ class EntregaTareaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
+        # Si el usuario es docente, permitirle ver las entregas de sus secciones asignadas
+        if hasattr(user, 'perfil_docente') or SeccionDocente.objects.filter(docente=user).exists():
+            return EntregaTarea.objects.all()
         # Los estudiantes solo ven sus propias entregas/borradores
-        return EntregaTarea.objects.filter(estudiante=self.request.user)
+        return EntregaTarea.objects.filter(estudiante=user)
 
     @action(detail=False, methods=['post'], url_path='guardar-borrador')
     def guardar_borrador(self, request):
@@ -170,5 +179,23 @@ class EntregaTareaViewSet(viewsets.ModelViewSet):
                 }
             }
             return Response(comprobante, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='poner-en-revision')
+    def poner_en_revision(self, request, pk=None):
+        try:
+            entrega = cambiar_estado_revision(entrega_id=pk, docente=request.user)
+            serializer = self.get_serializer(entrega)
+            return Response({"mensaje": "La entrega ahora está En revisión", "data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='reabrir-entrega')
+    def reabrir(self, request, pk=None):
+        try:
+            entrega = reabrir_entrega(entrega_id=pk, docente=request.user)
+            serializer = self.get_serializer(entrega)
+            return Response({"mensaje": "La entrega ha sido Reabierta para el estudiante", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
