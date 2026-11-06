@@ -199,3 +199,45 @@ class EntregaTareaViewSet(viewsets.ModelViewSet):
             return Response({"mensaje": "La entrega ha sido Reabierta para el estudiante", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=False, methods=['get'], url_path='mis-pendientes')
+    def mis_pendientes(self, request):
+        """
+        Retorna las tareas que el estudiante actual tiene pendientes 
+        (tareas donde no cuenta con un envío definitivo).
+        """
+        estudiante = request.user
+        
+        # 1. Obtener IDs de tareas donde el estudiante ya hizo un envío definitivo
+        tareas_enviadas_ids = EntregaTarea.objects.filter(
+            estudiante=estudiante,
+            estado=EntregaTarea.EstadoEntrega.ENVIADO
+        ).values_list('tarea_id', flat=True)
+
+        # 2. Asumiendo que el estudiante pertenece a secciones inscritas, 
+        # filtramos las tareas de sus secciones que NO están en la lista de enviadas.
+        # (Ajusta el filtro de secciones según cómo tengas relacionada la inscripción)
+        from .models import Tarea, Inscripcion
+        
+        secciones_estudiante = Inscripcion.objects.filter(
+            estudiante=estudiante
+        ).values_list('seccion_id', flat=True)
+
+        # Tareas de las secciones del alumno que no han sido enviadas definitivamente
+        tareas_pendientes = Tarea.objects.filter(
+            fecha_cierre__gte=timezone.now()
+        ).exclude(
+            id__in=tareas_enviadas_ids
+        ).distinct()
+
+        # Opcional: Serializar o devolver un listado claro para el frontend
+        data = [{
+            "tarea_id": t.id,
+            "titulo": t.titulo,
+            "descripcion": t.descripcion,
+            "fecha_cierre": t.fecha_cierre,
+            "permite_atrasados": t.permite_atrasados
+        } for t in tareas_pendientes]
+
+        return Response(data, status=status.HTTP_200_OK)
