@@ -159,6 +159,8 @@ class Tarea(models.Model):
     fecha_cierre = models.DateTimeField(verbose_name="Fecha límite oficial")
     permite_atrasados = models.BooleanField(default=False, verbose_name="¿Permite entregas fuera de plazo?")
 
+    aplica_penalizacion_atraso = models.BooleanField(default=False, verbose_name="¿Aplica penalización del 1% por hora?")
+
     class Meta:
         verbose_name = "Tarea"
         verbose_name_plural = "Tareas"
@@ -171,6 +173,8 @@ class EntregaTarea(models.Model):
     class EstadoEntrega(models.TextChoices):
         BORRADOR = 'BORRADOR', 'Borrador'
         ENVIADO = 'ENVIADO', 'Enviado'
+        EN_REVISION = 'EN_REVISION', 'En revisión'
+        REABIERTA = 'REABIERTA', 'Reabierta'
 
     tarea = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name="entregas")
     estudiante = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Estudiante") # type: ignore
@@ -185,7 +189,7 @@ class EntregaTarea(models.Model):
     )
     
     estado = models.CharField(
-        max_length=10,
+        max_length=15,  # <-- Aumentado a 15 para soportar los nuevos estados sin truncarse
         choices=EstadoEntrega.choices,
         default=EstadoEntrega.BORRADOR,
         verbose_name="Estado de la entrega"
@@ -197,6 +201,17 @@ class EntregaTarea(models.Model):
     fecha_envio_definitivo = models.DateTimeField(blank=True, null=True, verbose_name="Fecha de envío definitivo")
     es_fuera_de_plazo = models.BooleanField(default=False, verbose_name="Entregado fuera de plazo")
 
+    exonerado_penalizacion = models.BooleanField(default=False, verbose_name="Exento de penalización por el docente")
+    calificacion_original = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Calificación sin penalización")
+    calificacion_final = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Calificación final penalizada")
+
+    class Meta:
+        verbose_name = "Entrega de Tarea"
+        verbose_name_plural = "Entregas de Tareas"
+        unique_together = ('tarea', 'estudiante')
+
+    def __str__(self):
+        return f"{self.tarea.titulo} - {self.estudiante.username} [{self.estado}]"
     class Meta:
         verbose_name = "Entrega de Tarea"
         verbose_name_plural = "Entregas de Tareas"

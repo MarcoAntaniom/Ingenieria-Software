@@ -169,7 +169,10 @@ class EntregaTareaSerializer(serializers.ModelSerializer):
             'fecha_envio',
             'fecha_modificacion',
             'fecha_envio_definitivo', 
-            'es_fuera_de_plazo'
+            'es_fuera_de_plazo',
+            'exonerado_penalizacion',     
+            'calificacion_original',       
+            'calificacion_final'
         ]
         read_only_fields = [
             'estudiante', 
@@ -180,8 +183,17 @@ class EntregaTareaSerializer(serializers.ModelSerializer):
             'es_fuera_de_plazo'
         ]
 
-    def validate(self, data):
-        # Si la instancia ya existe y su estado es ENVIADO, bloquear cualquier cambio posterior
-        if self.instance and self.instance.estado == EntregaTarea.EstadoEntrega.ENVIADO:
-            raise serializers.ValidationError("Esta entrega ya fue enviada definitivamente y no puede ser modificada.")
+def validate(self, data):
+        # Si la instancia ya existe, evaluamos las restricciones según su estado actual
+        if self.instance:
+            # Si está ENVIADO o EN_REVISION, el estudiante no puede modificarlo directamente
+            if self.instance.estado in [EntregaTarea.EstadoEntrega.ENVIADO, EntregaTarea.EstadoEntrega.EN_REVISION]:
+                raise serializers.ValidationError(
+                    "Esta entrega se encuentra enviada o en proceso de revisión y no puede ser modificada."
+                )
+            
+            # Si el estado es REABIERTA, permitimos que el estudiante edite o reenvíe su tarea
+            # Opcionalmente, podrías cambiar el estado de regreso a BORRADOR al momento de actualizar:
+            # data['estado'] = EntregaTarea.EstadoEntrega.BORRADOR
+            
         return data
