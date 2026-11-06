@@ -122,12 +122,13 @@ function Dashboard() {
   const [reloadKey, setReloadKey] = useState(0)
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const estudianteId = user?.perfil_estudiante?.id;  
 
   useEffect(() => {
     let active = true
 
     api
-      .get(`academico/inscripciones/?estudiante=${user?.id}/`)
+      .get(`academico/inscripciones/?estudiante=${estudianteId}`)
       .then(({ data }) => {
         const rows = data?.datos ?? data?.results
         if (!Array.isArray(rows)) {
