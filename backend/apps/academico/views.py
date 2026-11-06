@@ -141,9 +141,24 @@ class InscripcionListCreateView(generics.ListCreateAPIView):
 
 
 class InscripcionDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Inscripcion.objects.select_related('seccion', 'estudiante', 'estado').all()
     serializer_class = InscripcionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        usuario = self.request.user
+        qs = Inscripcion.objects.select_related(
+            'seccion__asignatura', 
+            'seccion__periodo_academico', 
+            'estudiante', 
+            'estado'
+        )
+        
+        # Si el usuario conectado es estudiante, restringe el acceso únicamente a SUS inscripciones
+        if hasattr(usuario, 'perfil_estudiante'):
+            return qs.filter(estudiante=usuario.perfil_estudiante)
+            
+        # Comportamiento por defecto (ej. para un Administrador que necesite editar cualquier inscripción)
+        return qs.all()
 
 
 class EntregaTareaViewSet(viewsets.ModelViewSet):
