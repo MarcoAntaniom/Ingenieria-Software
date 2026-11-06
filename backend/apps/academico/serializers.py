@@ -169,7 +169,10 @@ class EntregaTareaSerializer(serializers.ModelSerializer):
             'fecha_envio',
             'fecha_modificacion',
             'fecha_envio_definitivo', 
-            'es_fuera_de_plazo'
+            'es_fuera_de_plazo',
+            'exonerado_penalizacion',     
+            'calificacion_original',       
+            'calificacion_final'
         ]
         read_only_fields = [
             'estudiante', 

@@ -159,6 +159,8 @@ class Tarea(models.Model):
     fecha_cierre = models.DateTimeField(verbose_name="Fecha límite oficial")
     permite_atrasados = models.BooleanField(default=False, verbose_name="¿Permite entregas fuera de plazo?")
 
+    aplica_penalizacion_atraso = models.BooleanField(default=False, verbose_name="¿Aplica penalización del 1% por hora?")
+
     class Meta:
         verbose_name = "Tarea"
         verbose_name_plural = "Tareas"
@@ -196,6 +198,10 @@ class EntregaTarea(models.Model):
     fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name="Última modificación")
     fecha_envio_definitivo = models.DateTimeField(blank=True, null=True, verbose_name="Fecha de envío definitivo")
     es_fuera_de_plazo = models.BooleanField(default=False, verbose_name="Entregado fuera de plazo")
+
+    exonerado_penalizacion = models.BooleanField(default=False, verbose_name="Exento de penalización por el docente")
+    calificacion_original = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Calificación sin penalización")
+    calificacion_final = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Calificación final penalizada")
 
     class Meta:
         verbose_name = "Entrega de Tarea"
