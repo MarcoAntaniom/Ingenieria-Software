@@ -127,7 +127,7 @@ function Dashboard() {
     let active = true
 
     api
-      .get('academico/inscripciones/')
+      .get(`academico/inscripciones/?estudiante=${user?.id}/`)
       .then(({ data }) => {
         const rows = data?.datos ?? data?.results
         if (!Array.isArray(rows)) {
