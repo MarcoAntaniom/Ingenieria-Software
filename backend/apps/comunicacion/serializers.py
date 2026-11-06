@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Foro, TemaForo, MensajeForo
+from .models import Foro, TemaForo, MensajeForo, Conversacion, MensajeDirecto
+from .crypto import descifrar_mensaje
+
 
 class MensajeForoSerializer(serializers.ModelSerializer):
     autor_nombre = serializers.ReadOnlyField(source='autor.username')
@@ -65,3 +67,26 @@ class ForoSerializer(serializers.ModelSerializer):
 
     def get_temas_count(self, obj):
         return obj.temas.count()
+
+
+# --- NUEVO SERIALIZADOR PARA MENSAJERÍA PRIVADA CIFRADA ---
+
+class MensajeDirectoSerializer(serializers.ModelSerializer):
+    remitente_nombre = serializers.ReadOnlyField(source='remitente.username')
+    contenido = serializers.SerializerMethodField()  # Sobrescribimos para descifrar en lectura
+
+    class Meta:
+        model = MensajeDirecto
+        fields = [
+            'id', 
+            'conversacion', 
+            'remitente', 
+            'remitente_nombre', 
+            'contenido', 
+            'enviado_en'
+        ]
+        read_only_fields = ['remitente', 'enviado_en']
+
+    def get_contenido(self, obj):
+        # Desencripta el contenido cifrado de la base de datos al ser consultado
+        return descifrar_mensaje(obj.contenido)
