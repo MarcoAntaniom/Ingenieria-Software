@@ -9,8 +9,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #0f172a;
-  background: #f5f8fa;
+  color: var(--color-ink);
+  background: var(--color-surface);
 }
 
 /* Asegura que la aplicación ocupe al menos el alto de la ventana. */
@@ -23,6 +23,11 @@ body {
 /* Permite que la raíz de React se extienda a toda la pantalla. */
 #root {
   min-height: 100vh;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Configura la fuente de iconos Material Symbols usada en la interfaz. */

@@ -30,11 +30,16 @@ export default {
         ink: '#0F172A',
         muted: '#64748B',
         danger: '#EF4444',
+        'danger-strong': '#B91C1C',
         'danger-soft': '#FEE2E2',
+        success: '#15803D',
+        'success-soft': '#DCFCE7',
+        warning: '#B45309',
+        'warning-soft': '#FEF3C7',
         'primary-container': '#104c64',
         'secondary-container': '#8cf5e4',
         'secondary-fixed': '#8cf5e4',
-        'on-secondary-container': '#007166',
+        'on-secondary-container': '#00574F',
       },
       // Configura la fuente principal del diseño.
       fontFamily: {
