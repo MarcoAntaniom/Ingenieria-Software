@@ -52,8 +52,12 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const authenticatedUser = await loginWithCredentials(email, password)
+    if (!authenticatedUser || !authenticatedUser.rol) {
+      throw new Error('El perfil de usuario no cuenta con un rol institucional válido asignado.')
+    }
     setUser(authenticatedUser)
     setIsAuthenticated(true)
+    return authenticatedUser
   }
 
   async function signOut() {
