@@ -185,25 +185,44 @@ export function Dashboard() {
     api
       .get('academico/inscripciones/')
       .then(({ data }) => {
-        const rows = data?.datos ?? data?.results ?? (Array.isArray(data) ? data : null)
+        const rows =
+          data?.datos ??
+          data?.results ??
+          (Array.isArray(data) ? data : null)
         if (Array.isArray(rows) && rows.length > 0 && active) {
           setCourses((prev) =>
-            rows.map((row, idx) => {
-              const code = row.code || row.seccion?.asignatura?.codigo || `INF-${300 + idx}`
-              const title = row.title || row.seccion?.asignatura?.nombre || `Asignatura ${code}`
+            rows.map((row, index) => {
+              const code =
+                row.code ||
+                row.seccion?.asignatura?.codigo ||
+                row.codigo_asignatura ||
+                `INF-${300 + index}`
+              const title =
+                row.title ||
+                row.seccion?.asignatura?.nombre ||
+                row.asignatura_nombre ||
+                `Asignatura ${code}`
               const existing = prev.find((c) => c.code === code) || {}
 
               return {
                 ...existing,
-                id: row.id || idx + 1,
+                id: row.id || index + 1,
                 code,
                 section: row.section || row.seccion?.numero_seccion || 1,
                 title,
                 teacher: row.teacher || existing.teacher || 'Docente Titular',
-                period: row.period || existing.period || 'Semestre Otoño 2026',
+                period:
+                  row.period ||
+                  row.seccion?.periodo_academico?.codigo ||
+                  row.periodo ||
+                  existing.period ||
+                  'Semestre Otoño 2026',
                 status: row.status || existing.status || 'progress',
                 badge: row.badge || existing.badge || 'Trabajo colaborativo',
-                progress: row.progress !== undefined ? row.progress : (existing.progress || 60),
+                progress:
+                  row.progress !== undefined
+                    ? row.progress
+                    : existing.progress || 60,
                 taskTitle: row.taskTitle !== undefined ? row.taskTitle : existing.taskTitle,
                 taskDate: row.taskDate !== undefined ? row.taskDate : existing.taskDate,
                 taskType: row.taskType || existing.taskType,
@@ -220,7 +239,11 @@ export function Dashboard() {
           )
         }
       })
-      .catch(() => {})
+      .catch((error) => {
+        if (active) {
+          console.error('No se pudieron cargar las inscripciones.', error)
+        }
+      })
 
     return () => {
       active = false
