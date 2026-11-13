@@ -1,10 +1,25 @@
 from rest_framework import serializers
-from .models import Foro, TemaForo, MensajeForo, Conversacion, MensajeDirecto
+from .models import Anuncio, Foro, TemaForo, MensajeForo, Conversacion, MensajeDirecto
 from .crypto import descifrar_mensaje
 
 
+class AnuncioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Anuncio
+        fields = [
+            'id',
+            'seccion',
+            'autor',
+            'titulo',
+            'contenido',
+            'fijado',
+            'creado_en',
+        ]
+        read_only_fields = ['autor', 'creado_en']
+
+
 class MensajeForoSerializer(serializers.ModelSerializer):
-    autor_nombre = serializers.ReadOnlyField(source='autor.username')
+    autor_nombre = serializers.SerializerMethodField()
     respuestas = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
@@ -22,9 +37,12 @@ class MensajeForoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['autor', 'creado_en', 'editado_en']
 
+    def get_autor_nombre(self, obj):
+        return f'{obj.autor.nombres} {obj.autor.apellidos}'.strip()
+
 
 class TemaForoSerializer(serializers.ModelSerializer):
-    autor_nombre = serializers.ReadOnlyField(source='autor.username')
+    autor_nombre = serializers.SerializerMethodField()
     mensajes_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -42,12 +60,15 @@ class TemaForoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['autor', 'creado_en']
 
+    def get_autor_nombre(self, obj):
+        return f'{obj.autor.nombres} {obj.autor.apellidos}'.strip()
+
     def get_mensajes_count(self, obj):
         return obj.mensajes.count()
 
 
 class ForoSerializer(serializers.ModelSerializer):
-    creado_por_nombre = serializers.ReadOnlyField(source='creado_por.username')
+    creado_por_nombre = serializers.SerializerMethodField()
     temas_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -65,6 +86,9 @@ class ForoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['creado_por', 'creado_en']
 
+    def get_creado_por_nombre(self, obj):
+        return f'{obj.creado_por.nombres} {obj.creado_por.apellidos}'.strip()
+
     def get_temas_count(self, obj):
         return obj.temas.count()
 
@@ -72,7 +96,7 @@ class ForoSerializer(serializers.ModelSerializer):
 # --- NUEVO SERIALIZADOR PARA MENSAJERÍA PRIVADA CIFRADA ---
 
 class MensajeDirectoSerializer(serializers.ModelSerializer):
-    remitente_nombre = serializers.ReadOnlyField(source='remitente.username')
+    remitente_nombre = serializers.SerializerMethodField()
     contenido = serializers.SerializerMethodField()  # Sobrescribimos para descifrar en lectura
 
     class Meta:
@@ -90,3 +114,6 @@ class MensajeDirectoSerializer(serializers.ModelSerializer):
     def get_contenido(self, obj):
         # Desencripta el contenido cifrado de la base de datos al ser consultado
         return descifrar_mensaje(obj.contenido)
+
+    def get_remitente_nombre(self, obj):
+        return f'{obj.remitente.nombres} {obj.remitente.apellidos}'.strip()
