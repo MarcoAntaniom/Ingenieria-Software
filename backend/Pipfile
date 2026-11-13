@@ -1,0 +1,46 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+asgiref = "==3.12.1"
+attrs = "==26.1.0"
+boto3 = "==1.43.114"
+botocore = "==1.43.114"
+cffi = "==2.1.1"
+cryptography = "==50.0.2"
+django = "==6.1.2"
+channels = "==4.2.2"
+channels-redis = "==4.2.1"
+daphne = "==4.2.1"
+django-cors-headers = "==4.9.0"
+django-environ = "==0.14.0"
+django-filter = "==26.2"
+django-storages = "==1.14.6"
+djangorestframework = "==3.18.3"
+djangorestframework-simplejwt = "==5.5.1"
+drf-spectacular = "==0.30.0"
+gunicorn = "==26.2.0"
+inflection = "==0.5.1"
+jmespath = "==1.1.0"
+jsonschema = "==4.26.0"
+jsonschema-specifications = "==2025.9.1"
+psycopg2-binary = "==2.9.13"
+pycparser = "==3.11"
+pyjwt = "==2.15.1"
+python-dateutil = "==2.9.0.post0"
+pyyaml = "==6.0.3"
+referencing = "==0.37.0"
+rpds-py = "==2026.9.1"
+s3transfer = "==0.19.2"
+six = "==1.17.0"
+sqlparse = "==0.6.0"
+tzdata = "==2026.5"
+uritemplate = "==4.2.0"
+urllib3 = "==2.8.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
