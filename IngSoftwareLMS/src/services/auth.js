@@ -10,8 +10,8 @@ function getUserFromResponse(data) {
   return user
 }
 
-export async function fetchCurrentUser() {
-  const { data } = await api.get('usuarios/me/')
+export async function fetchCurrentUser({ skipAuthRefresh = false } = {}) {
+  const { data } = await api.get('usuarios/me/', { skipAuthRefresh })
   return getUserFromResponse(data)
 }
 

@@ -7,6 +7,8 @@ import { getLandingPath, getUserRole } from './utils/roles'
 const LoginPage = lazy(() => import('./pages/LoginPage.jsx'))
 const Dashboard = lazy(() => import('./components/Dashboard.jsx'))
 const ModulePage = lazy(() => import('./pages/ModulePage.jsx'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage.jsx'))
 const PermissionDeniedPage = lazy(() =>
   import('./pages/StatusPages.jsx').then((module) => ({
     default: module.PermissionDeniedPage,
@@ -91,6 +93,26 @@ function App() {
         <Route
           element={
             <ProtectedRoute>
+              <RoleRoute allowedRoles={['student', 'teacher', 'admin']}>
+                <ProfilePage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/profile"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['student', 'teacher', 'admin']}>
+                <NotificationsPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/notifications"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
               <RoleRoute allowedRoles={['student']}>
                 <Dashboard />
               </RoleRoute>
@@ -98,7 +120,7 @@ function App() {
           }
           path="/dashboard"
         />
-        {MODULES.map((module) => (
+        {MODULES.filter((module) => !module.available).map((module) => (
           <Route
             element={
               <ProtectedRoute>

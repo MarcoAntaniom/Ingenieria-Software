@@ -8,10 +8,10 @@ import {
 import { normalizeApiError } from './api-errors'
 
 export const SESSION_EXPIRED_EVENT = 'lms:session-expired'
+export const SESSION_REFRESHED_EVENT = 'lms:session-refreshed'
 
-const baseURL = import.meta.env.DEV
-  ? '/api/v1/'
-  : import.meta.env.VITE_API_URL || '/api/v1/'
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
+const baseURL = `${(configuredApiUrl || '/api/v1/').replace(/\/+$/u, '')}/`
 
 const api = axios.create({
   baseURL,
@@ -33,7 +33,7 @@ function notifySessionExpired() {
   window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 }
 
-export async function refreshAccessToken() {
+export async function refreshAccessToken({ notifyUser = false } = {}) {
   const refresh = getRefreshToken()
   if (!refresh) {
     notifySessionExpired()
@@ -52,6 +52,9 @@ export async function refreshAccessToken() {
           access: data.access,
           refresh: typeof data.refresh === 'string' ? data.refresh : null,
         })
+        if (notifyUser) {
+          window.dispatchEvent(new Event(SESSION_REFRESHED_EVENT))
+        }
         return data.access
       })
       .catch((error) => {
@@ -82,6 +85,7 @@ api.interceptors.response.use(
       error.response?.status !== 401 ||
       !originalRequest ||
       originalRequest._retry ||
+      originalRequest.skipAuthRefresh ||
       isAuthenticationRequest(originalRequest.url)
     ) {
       return Promise.reject(normalizeApiError(error))
@@ -89,7 +93,7 @@ api.interceptors.response.use(
 
     originalRequest._retry = true
     try {
-      const access = await refreshAccessToken()
+      const access = await refreshAccessToken({ notifyUser: true })
       originalRequest.headers.set('Authorization', `Bearer ${access}`)
       return api(originalRequest)
     } catch (refreshError) {

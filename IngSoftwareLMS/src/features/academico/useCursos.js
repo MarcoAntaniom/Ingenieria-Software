@@ -17,15 +17,11 @@ function mapInscription(row) {
 
   return {
     id: row?.id,
-    title: subject?.nombre || 'Sin datos',
-    code: subject?.codigo || 'Sin datos',
+    title: subject?.nombre || null,
+    code: subject?.codigo || null,
     section: section?.numero_seccion ?? null,
-    period: period?.codigo || 'Sin datos',
+    period: period?.codigo || null,
     status: row?.estado?.codigo || null,
-    progress: null,
-    teacher: null,
-    taskTitle: null,
-    taskDate: null,
   }
 }
 

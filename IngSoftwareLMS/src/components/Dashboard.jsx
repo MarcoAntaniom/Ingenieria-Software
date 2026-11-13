@@ -30,68 +30,28 @@ function CourseCard({ course, color }) {
     <article className="flex flex-col overflow-hidden rounded-xl border border-line bg-card shadow-sm transition-transform motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
       <div className={`flex min-h-36 flex-col justify-between bg-gradient-to-br p-4 text-white ${color}`}>
         <div>
-          <span className="rounded bg-white/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-secondary-fixed">
-            {course.code}
-            {course.section !== null ? ` · Sec. ${course.section}` : ''}
-          </span>
+          {(course.code || course.section !== null) && (
+            <span className="rounded bg-white/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-secondary-fixed">
+              {course.code || 'Asignatura'}
+              {course.section !== null ? ` · Sec. ${course.section}` : ''}
+            </span>
+          )}
           <h2
-            className="mt-2 truncate text-base font-bold leading-tight"
+            className="mt-2 break-words text-base font-bold leading-tight"
             title={course.title}
           >
-            {course.title}
+            {course.title || 'Asignatura sin nombre'}
           </h2>
-          <p className="text-xs text-white/85">
-            Docente: {course.teacher || 'Sin datos'}
-          </p>
         </div>
-        <StatusBadge tone={course.status ? 'info' : 'neutral'}>
-          Estado de inscripción: {course.status || 'Sin datos'}
-        </StatusBadge>
+        {course.status && <StatusBadge tone="info">Inscripción: {course.status}</StatusBadge>}
       </div>
 
       <div className="flex flex-1 flex-col justify-between gap-4 p-4">
-        <div>
-          <div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-wider">
-            <span className="text-muted">Avance del curso</span>
-            <span className="text-primary">
-              {Number.isFinite(course.progress) ? `${course.progress}%` : 'Sin datos'}
-            </span>
-          </div>
-          {Number.isFinite(course.progress) && (
-            <div
-              aria-label={`Avance ${course.progress}%`}
-              aria-valuemax="100"
-              aria-valuemin="0"
-              aria-valuenow={course.progress}
-              className="h-1.5 overflow-hidden rounded-full bg-subtle"
-              role="progressbar"
-            >
-              <div
-                className="h-full rounded-full bg-secondary"
-                style={{ width: `${course.progress}%` }}
-              />
-            </div>
-          )}
-          <div className="mt-4 flex items-start gap-2.5 rounded-lg bg-subtle p-3">
-            <span aria-hidden="true" className="material-symbols-outlined shrink-0 text-secondary">
-              assignment
-            </span>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase text-secondary-dark">
-                Próxima tarea
-              </p>
-              <p className="truncate text-xs font-bold">
-                {course.taskTitle || 'Sin datos'}
-              </p>
-              <p className="text-[11px] text-muted">
-                {course.taskDate || 'Sin datos'}
-              </p>
-            </div>
-          </div>
-        </div>
-        <p className="border-t border-line pt-3 text-[11px] text-muted">
-          Período: {course.period}
-        </p>
+        {course.period && (
+          <p className="border-t border-line pt-3 text-[11px] text-muted">
+            Período: {course.period}
+          </p>
+        )}
       </div>
     </article>
   )
@@ -167,10 +127,11 @@ export default function Dashboard() {
     const searchTerm = normalize(debouncedQuery.trim())
     return [...courses]
       .filter((course) =>
-        normalize(`${course.title} ${course.code}`).includes(searchTerm),
+        normalize(`${course.title || ''} ${course.code || ''}`).includes(searchTerm),
       )
       .sort((first, second) =>
-        first.title.localeCompare(second.title, 'es') * (ascending ? 1 : -1),
+        (first.title || '').localeCompare(second.title || '', 'es') *
+        (ascending ? 1 : -1),
       )
   }, [ascending, courses, debouncedQuery])
 
@@ -190,9 +151,11 @@ export default function Dashboard() {
               <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
                 Panel Central de Clases
               </h1>
-              <span className="rounded-full border border-secondary/50 bg-secondary/40 px-2.5 py-0.5 text-xs font-semibold">
-                {pageData?.count ?? 0} inscripciones
-              </span>
+              {pageData && (
+                <span className="rounded-full border border-secondary/50 bg-secondary/40 px-2.5 py-0.5 text-xs font-semibold">
+                  {pageData.count} inscripciones
+                </span>
+              )}
             </div>
             <p className="max-w-2xl text-sm text-white/90">
               Hola, {displayName}. Aquí puedes revisar tus asignaturas.
@@ -208,7 +171,7 @@ export default function Dashboard() {
           </span>
           <div className="flex items-center gap-2.5 lg:min-w-[300px]">
             <label className="sr-only" htmlFor="course-search">
-              Buscar asignatura
+              Buscar asignatura en esta página
             </label>
             <div className="relative w-full">
               <span
@@ -219,15 +182,19 @@ export default function Dashboard() {
               </span>
               <input
                 className="w-full rounded-lg border border-transparent bg-subtle py-2 pl-10 pr-4 text-xs text-ink focus:border-primary/30 focus:bg-card focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                aria-describedby="course-search-hint"
                 id="course-search"
                 onChange={(event) => {
                   setQuery(event.target.value)
                   setPage(1)
                 }}
-                placeholder="Buscar asignatura o código..."
+                placeholder="Buscar en esta página..."
                 type="search"
                 value={query}
               />
+              <span className="sr-only" id="course-search-hint">
+                La búsqueda solo incluye las inscripciones de la página cargada.
+              </span>
             </div>
             <button
               aria-label={`Ordenar por nombre (${ascending ? 'A-Z' : 'Z-A'})`}

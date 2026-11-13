@@ -11,9 +11,9 @@ export default function ModulePage({ module }) {
         </h1>
         <Card className="p-6">
           <EmptyState
-            description="El backend aún no publica el endpoint necesario. Esta pantalla no carga ni genera datos de ejemplo."
-            icon="construction"
-            title="Módulo no disponible"
+            description={module.blocker || 'Falta confirmar un contrato de backend seguro para esta función.'}
+            icon="pending_actions"
+            title="Función pendiente del backend"
           />
         </Card>
       </section>

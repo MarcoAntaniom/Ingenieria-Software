@@ -1,12 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/auth-context'
 import { MODULES, SHOW_UNAVAILABLE_MODULES } from '../../features/modules/moduleRegistry'
 import { getUserRole } from '../../utils/roles'
+import { useUnreadNotificationCount } from '../../features/notificaciones/useNotifications'
 
 export default function AppShell({ children }) {
   const { user, signOut } = useAuth()
+  const unreadNotifications = useUnreadNotificationCount()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+  const menuButtonRef = useRef(null)
+  const sidebarRef = useRef(null)
   const navigate = useNavigate()
   const role = getUserRole(user)
   const displayName =
@@ -18,28 +23,67 @@ export default function AppShell({ children }) {
       (role === 'teacher' && module.key === 'teacher-sections') ||
       (role === 'admin' && module.key === 'admin-users'),
   )
+  const visibleModules = MODULES.filter(
+    (module) =>
+      module.roles.includes(role) &&
+      (module.available || SHOW_UNAVAILABLE_MODULES) &&
+      !module.path.includes(':'),
+  )
   const links = [
     ...(role === 'student'
       ? [{ title: 'Mis cursos', path: '/dashboard', icon: 'home', key: 'dashboard' }]
       : []),
-    ...(roleHome ? [roleHome] : []),
-    ...(SHOW_UNAVAILABLE_MODULES
-      ? MODULES.filter(
-          (module) =>
-            module.roles.includes(role) &&
-            !module.path.includes(':') &&
-            module.key !== roleHome?.key,
-        )
+    ...(roleHome && (roleHome.available || SHOW_UNAVAILABLE_MODULES)
+      ? [roleHome]
       : []),
+    ...visibleModules.filter((module) => module.key !== roleHome?.key),
   ]
 
   useEffect(() => {
-    function closeOnEscape(event) {
-      if (event.key === 'Escape') setMenuOpen(false)
-    }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const updateViewport = () => setIsDesktop(mediaQuery.matches)
+    updateViewport()
+    mediaQuery.addEventListener('change', updateViewport)
+    return () => mediaQuery.removeEventListener('change', updateViewport)
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen || isDesktop) return undefined
+
+    const sidebar = sidebarRef.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const getFocusableItems = () =>
+      sidebar?.querySelectorAll('a[href], button:not([disabled])') || []
+    getFocusableItems()[0]?.focus()
+
+    function handleMenuKeyDown(event) {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        menuButtonRef.current?.focus()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const items = getFocusableItems()
+      if (items.length === 0) return
+      const firstItem = items[0]
+      const lastItem = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === firstItem) {
+        event.preventDefault()
+        lastItem.focus()
+      } else if (!event.shiftKey && document.activeElement === lastItem) {
+        event.preventDefault()
+        firstItem.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleMenuKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleMenuKeyDown)
+    }
+  }, [isDesktop, menuOpen])
 
   async function handleLogout() {
     try {
@@ -63,6 +107,7 @@ export default function AppShell({ children }) {
             aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
             className="rounded-full p-1.5 text-primary hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:hidden"
             onClick={() => setMenuOpen((open) => !open)}
+            ref={menuButtonRef}
             type="button"
           >
             <span aria-hidden="true" className="material-symbols-outlined">menu</span>
@@ -97,7 +142,11 @@ export default function AppShell({ children }) {
         <button
           aria-label="Cerrar menú"
           className="fixed inset-0 z-30 bg-ink/40 lg:hidden"
-          onClick={() => setMenuOpen(false)}
+          onClick={() => {
+            setMenuOpen(false)
+            menuButtonRef.current?.focus()
+          }}
+          tabIndex={-1}
           type="button"
         />
       )}
@@ -106,7 +155,10 @@ export default function AppShell({ children }) {
         className={`fixed bottom-0 left-0 top-16 z-40 flex w-64 flex-col justify-between overflow-y-auto border-r border-line bg-card py-4 transition-transform motion-reduce:transition-none lg:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        aria-hidden={!isDesktop && !menuOpen}
+        inert={!isDesktop && !menuOpen}
         id="app-sidebar"
+        ref={sidebarRef}
       >
         <nav aria-label="Principal" className="flex flex-col gap-1 px-3">
           {links.map((link) => (
@@ -120,11 +172,22 @@ export default function AppShell({ children }) {
               }
               end
               key={link.key || link.path}
-              onClick={() => setMenuOpen(false)}
+              onClick={() => {
+                setMenuOpen(false)
+                menuButtonRef.current?.focus()
+              }}
               to={link.path}
             >
               <span aria-hidden="true" className="material-symbols-outlined">{link.icon}</span>
               {link.title}
+              {link.key === 'notifications' && unreadNotifications.data > 0 && (
+                <span
+                  aria-label={`${unreadNotifications.data} sin leer`}
+                  className="ml-auto min-w-5 rounded-full bg-danger-strong px-1.5 py-0.5 text-center text-[10px] font-bold text-white"
+                >
+                  {unreadNotifications.data > 99 ? '99+' : unreadNotifications.data}
+                </span>
+              )}
             </NavLink>
           ))}
           {links.length === 0 && (
@@ -143,7 +206,7 @@ export default function AppShell({ children }) {
         </div>
       </aside>
 
-      <main className="min-h-screen pt-16 lg:pl-64">
+      <main className="min-h-screen pt-16 lg:pl-64" inert={!isDesktop && menuOpen}>
         {children}
         <footer className="border-t border-line bg-card py-5 text-xs text-muted">
           <div className="mx-auto max-w-[1360px] px-6 lg:px-10">

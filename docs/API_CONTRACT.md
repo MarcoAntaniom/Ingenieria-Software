@@ -1,10 +1,20 @@
 # Contrato de API disponible
 
-## Alcance de la auditoría
+## Fuente y estado del contrato
 
-Contrato revisado en la rama `backend`, commit `f4c59111611ea32474b877b054b4fc3875bf4952`. La rama de trabajo `feat/frontend-lms` no contiene los archivos Python del backend; se leyeron los blobs de la rama `backend` sin cambiarla ni hacerle checkout. Confirmar con backend que ese commit sea el desplegado antes de integrar.
+La referencia para el trabajo actual es el código presente en `backend/`. Esa
+carpeta no está rastreada por Git en esta rama, por lo que su contenido no tiene
+un commit/version verificable y **no se puede afirmar que corresponda al
+backend desplegado**. No se hicieron solicitudes de humo a staging. Antes de
+publicar una integración, backend debe versionar y aprobar este contrato y
+confirmar el entorno desplegado.
 
-Prefijo registrado: `/api/v1/`. Autenticación global JWT `Authorization: Bearer <access>`. DRF usa `PageNumberPagination`, 20 resultados por página; las vistas genéricas de lista devuelven `{ "count", "next", "previous", "results" }` (sin envoltura `datos`). `page` es el único parámetro estándar de paginación y el tamaño no se puede ajustar por petición. Los endpoints basados en `APIView` devuelven sus formas descritas abajo y no se paginan. No se encontró configuración de `filterset_fields` para las listas académicas; parámetros arbitrarios como `estudiante` no están definidos.
+Prefijo registrado: `/api/v1/`. Las vistas protegidas usan JWT
+`Authorization: Bearer <access>`. DRF está configurado con paginación por
+página de 20 elementos; las vistas genéricas de lista devuelven
+`{ "count", "next", "previous", "results" }`. `page` es el parámetro estándar.
+Las vistas `APIView` y algunas acciones de viewset devuelven formas directas.
+No se deben asumir filtros que no estén implementados expresamente.
 
 `/admin/` publica la interfaz administrativa de Django, no una API REST para el frontend.
 
@@ -29,7 +39,11 @@ El rol se obtiene del servidor desde `datos.rol.codigo` en `/usuarios/me/` (tamb
 
 ## Académico
 
-Las rutas de catálogo usan vistas DRF genéricas: colecciones `GET, POST`; detalle `GET, PUT, PATCH, DELETE`. Las colecciones son paginadas (20). Todos requieren autenticación, pero no tienen permisos por rol ni filtros específicos.
+Las rutas de catálogo usan vistas DRF genéricas: colecciones `GET, POST`;
+detalle `GET, PUT, PATCH, DELETE`. Las colecciones son paginadas (20). En el
+código local, estas vistas solo requieren autenticación; no implementan
+permisos por rol/propiedad ni filtros específicos. No exponer sus operaciones
+de escritura en la UI hasta que el backend corrija y pruebe esos permisos.
 
 | Endpoint | Métodos | Forma de respuesta / campos | Permisos y parámetros |
 |---|---|---|---|
@@ -44,27 +58,57 @@ Las rutas de catálogo usan vistas DRF genéricas: colecciones `GET, POST`; deta
 
 En las inscripciones, `estudiante` es texto, no un objeto de perfil. El objeto `seccion` no incluye docente. No hay campos de avance ni tarea próxima.
 
-## Evaluaciones y entregas
+## Tareas y entregas
 
 | Endpoint | Métodos | Parámetros / cuerpo | Respuesta de éxito | Permisos y observaciones |
 |---|---|---|---|---|
 | `/evaluaciones/create/` | `POST` | `{seccion, rubrica, titulo, instrucciones, fecha_apertura, fecha_limite, puntaje_maximo, permitir_entregas_tardias, es_visible}` | `201 { "mensaje": "Tarea creada exitosamente", "tarea": {id, seccion, rubrica, titulo, instrucciones, fecha_apertura, fecha_limite, puntaje_maximo, permitir_entregas_tardias, es_visible} }` | Autenticado, sin verificación de rol docente. No hay GET/listado/detalle/edición de tareas. |
+| `/academico/tareas/`, `/academico/tareas/{id}/` | `GET, POST`; detalle `GET, PUT, PATCH, DELETE` | Serializador del modelo `academico.Tarea` | Colección paginada; detalle según serializer | Autenticado, sin verificación de rol docente ni propiedad de sección. No usar para flujos docentes hasta corregir permisos. |
+| `/academico/entregas-tareas/`, `/academico/entregas-tareas/{id}/` | CRUD de `ModelViewSet` | Serializador del modelo `EntregaTarea` | Colección paginada o detalle según serializer | La consulta cambia entre estudiante/docente, pero no valida de forma confiable propiedad de sección ni el vínculo estudiante/usuario. Requiere pruebas y correcciones antes de integrar. |
+| `/academico/entregas-tareas/mis-pendientes/` | `GET` | Sin parámetros declarados | Lista directa de tareas | La implementación calcula secciones inscritas pero no las aplica al queryset; no usar. |
+| `/academico/entregas-tareas/guardar-borrador/` | `POST` | Multipart: `tarea`, `archivo`, `comentario_estudiante` | Entrega serializada | Autenticado; revisar vínculo de identidad, validación de archivo, excepciones y permisos antes de integrar. |
+| `/academico/entregas-tareas/{id}/confirmar-envio/` | `POST` | Sin cuerpo requerido | `{mensaje, comprobante: {id_entrega, tarea, estudiante, archivo, estado, timestamp_oficial, es_fuera_de_plazo}}` | Autenticado; el servicio verifica al estudiante, pero el alcance no está probado. La respuesta no incluye hash ni tamaño. |
+| `/academico/entregas-tareas/{id}/poner-en-revision/`, `/reabrir-entrega/` | `POST` | Sin cuerpo requerido | `{mensaje, data}` | No usar hasta verificar rol docente y propiedad de sección; las vistas capturan excepciones genéricas y responden `400`. |
 
-`EntregaTareaViewSet` y acciones para guardar borrador, confirmar envío, cambiar estado y reabrir aparecen en `apps.academico.views`, pero **no se registran en ninguna URL/router**. No son endpoints consumibles. El comprobante actualmente no incluye RUT enmascarado, tamaño de archivo ni hash; no se debe fabricar esa información en el cliente.
+El modelo `evaluaciones.Tarea` de `/evaluaciones/create/` es distinto del modelo
+`academico.Tarea`; aún debe definirse una fuente de verdad. El comprobante no
+debe completar datos que no envía el servidor.
+
+## Notificaciones
+
+| Endpoint | Métodos | Respuesta / filtros | Permisos y observaciones |
+|---|---|---|---|
+| `/notificaciones/` | `GET` | Lista paginada de `{id, titulo, mensaje, tipo, datos, leida, creada_en, leida_en}`; filtros `leida=true/false` y `tipo=<codigo>` | Solo devuelve notificaciones del usuario autenticado. |
+| `/notificaciones/tipos/` | `GET` | Lista paginada `{codigo, nombre, descripcion}` | Solo tipos activos. |
+| `/notificaciones/no-leidas/contador/` | `GET` | `{no_leidas: integer}` | Cuenta del usuario autenticado. |
+| `/notificaciones/{id}/leer/` | `POST` | Notificación actualizada | Comprueba destinatario. |
+| `/notificaciones/leer-todas/` | `POST` | `204 No Content` | Solo marca las del usuario autenticado. No intentar parsear un cuerpo JSON. |
+| `/ws/notificaciones/` | WebSocket | Evento `{type: "notification", notification: ...}`; ping `{type: "ping"}` | El middleware local autentica con `?token=<access>` y ASGI aplica `OriginValidator`. El token en query puede quedar registrado por infraestructura; coordinar rotación, TLS y política de logs antes de producción. |
 
 ## Comunicación y archivos
 
-No se incluyen URLs de `comunicacion` o `archivos` en `config/urls.py`; `comunicacion` no tiene `urls.py` y `archivos.views` no expone vistas. Aunque hay viewsets/modelos de foros y mensajería en el código, no existe una ruta API publicada. No se encontró endpoint para subida firmada ni metadatos de archivo.
+Las URLs locales sí incluyen `comunicacion/` y registran viewsets para
+`anuncios/`, `foros/`, `temas/`, `mensajes-foro/` y `mensajes-directos/`.
+`mensajes-directos/` limita el queryset a conversaciones donde participa el
+usuario; no hay una API para listar/crear conversaciones. Los demás viewsets
+exigen autenticación, pero no aíslan lectura por sección ni aplican permisos de
+edición/moderación consistentes. No habilitar sus pantallas antes de corregir
+ese aislamiento y confirmar paginación/contratos.
+
+`archivos` no publica API. No hay endpoint para almacenamiento/subida firmado,
+límites de archivo confirmados ni descarga autorizada.
 
 ## Inconsistencias y pendientes de backend
 
-- El README del frontend mencionaba `/academico/cursos/`, pero no existe esa ruta. La ruta disponible es `/academico/inscripciones/`; filtra al estudiante desde el usuario autenticado y no acepta `?estudiante=`.
-- El frontend intentaba leer `datos` o `results` y asumir docente, avance y tarea; la respuesta real de inscripción usa paginación `results` (o campos `datos` solo en algunas `APIView`) y no contiene docente, avance ni tarea.
+- El README del frontend mencionaba `/academico/cursos/`, pero no existe esa ruta. La ruta disponible es `/academico/inscripciones/`; filtra por perfil estudiante solo cuando el usuario tiene ese perfil. Usuarios sin perfil de estudiante pueden recibir todas las inscripciones.
+- La respuesta real de inscripción usa paginación `results` y no contiene docente, avance ni tarea. El frontend muestra solo los campos recibidos.
 - La respuesta de login sí envuelve los tokens y `usuario` en `datos`. `/me/` también usa `datos`; refresh no usa envoltura.
-- El frontend llama `/usuarios/logout/`, que no existe.
+- No existe `/usuarios/logout/`; el frontend solo limpia la sesión local.
 - No existe lectura del perfil estudiante/docente actual ni perfil embebido en `/usuarios/me/`; el campo `perfil_estudiante.id` esperado por el frontend no está disponible.
-- `EntregaTareaViewSet` no está enrutado; faltan endpoints funcionales de tareas y entregas para estudiantes y docentes (borrador, confirmación, revisión, calificación, comprobante verificable y descarga).
-- Faltan rutas para calendario, notificaciones, settings/perfil, anuncios, material, foros/mensajería, calificaciones, y administración/auditoría.
+- `EntregaTareaViewSet` está enrutado en el árbol local, pero tiene defectos de consulta/relación y no autoriza de forma suficiente las acciones docentes. No habilitarlo en frontend hasta corregir y probar estos riesgos.
+- Hay endpoints de notificaciones REST y WebSocket; para producción, evaluar autenticación WebSocket que no transmita el access token en query string.
+- Faltan rutas para calendario, lectura de perfiles estudiante/docente actuales, calificaciones, material y auditoría. La mensajería no publica listado/creación de conversaciones.
+- Los viewsets de comunicación y las APIs académicas genéricas tienen permisos insuficientes para lectura/escritura por rol o sección.
 - `archivos` no publica API; faltan validación/restricción de tipos y tamaño desde servidor, subida firmada, progreso/cancelación y descarga autorizada.
 - El login del backend revela si una cuenta está inactiva; debe normalizar el mensaje en servidor y agregar limitación de intentos. El bloqueo visual del frontend no es defensa contra fuerza bruta.
 - Los permisos académicos genéricos solo exigen autenticación; deben añadirse permisos por rol/propiedad en backend. La UI y los guards del cliente no sustituyen esa autorización.

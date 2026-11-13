@@ -15,7 +15,7 @@ export default function Modal({ open, onClose, title, children }) {
   return (
     <dialog
       aria-labelledby="modal-title"
-      className="m-auto w-[min(90vw,36rem)] rounded-xl border border-line bg-card p-0 text-ink shadow-xl backdrop:bg-ink/50"
+      className="m-auto max-h-[90dvh] w-[min(90vw,36rem)] overflow-y-auto rounded-xl border border-line bg-card p-0 text-ink shadow-xl backdrop:bg-ink/50"
       onCancel={(event) => {
         event.preventDefault()
         onClose()
