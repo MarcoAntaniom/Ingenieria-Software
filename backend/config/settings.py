@@ -39,6 +39,7 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,11 +52,13 @@ INSTALLED_APPS = [
     'django_filters',
     'storages',
     'drf_spectacular',
+    'channels',
     'apps.usuarios.apps.UsuariosConfig',
     'apps.academico.apps.AcademicoConfig',
     'apps.evaluaciones.apps.EvaluacionesConfig',
     'apps.comunicacion.apps.ComunicacionConfig',
     'apps.archivos.apps.ArchivosConfig',
+    'apps.notificaciones.apps.NotificacionesConfig',
 ]
 
 MIDDLEWARE = [
@@ -87,6 +90,22 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+REDIS_URL = env.str('REDIS_URL', default='')
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {'hosts': [REDIS_URL]},
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 
 # Database
@@ -181,6 +200,11 @@ else:
     CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
         'https://ingenieria-software.pages.dev',
     ])
+
+WEBSOCKET_ALLOWED_ORIGINS = env.list(
+    'WEBSOCKET_ALLOWED_ORIGINS',
+    default=['*'] if DEBUG else CORS_ALLOWED_ORIGINS,
+)
 
 CORS_ALLOW_CREDENTIALS = True
 
