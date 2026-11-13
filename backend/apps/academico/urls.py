@@ -1,12 +1,18 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 
 from .views import (
+    AnuncioAcademicoDetailView,
+    AnuncioAcademicoListCreateView,
     AsignaturaListCreateView,
     AsignaturaDetailView,
     CarreraListCreateView,
     CarreraDetailView,
     DepartamentoListCreateView,
     DepartamentoDetailView,
+    EntregaAcademicaDetailView,
+    EntregaAcademicaListCreateView,
+    EntregaTareaViewSet,
     EstadoInscripcionListCreateView,
     EstadoInscripcionDetailView,
     InscripcionListCreateView,
@@ -17,9 +23,20 @@ from .views import (
     SeccionDocenteDetailView,
     SeccionListCreateView,
     SeccionDetailView,
+    TareaDetailView,
+    TareaListCreateView,
 )
 
+router = DefaultRouter()
+router.register('entregas-tareas', EntregaTareaViewSet, basename='entrega-tarea')
+
 urlpatterns = [
+    path('entregas-academicas/', EntregaAcademicaListCreateView.as_view(), name='entregas-academicas-list-create'),
+    path('entregas-academicas/<int:pk>/', EntregaAcademicaDetailView.as_view(), name='entregas-academicas-detail'),
+    path('anuncios-academicos/', AnuncioAcademicoListCreateView.as_view(), name='anuncios-academicos-list-create'),
+    path('anuncios-academicos/<int:pk>/', AnuncioAcademicoDetailView.as_view(), name='anuncios-academicos-detail'),
+    path('tareas/', TareaListCreateView.as_view(), name='tareas-list-create'),
+    path('tareas/<int:pk>/', TareaDetailView.as_view(), name='tareas-detail'),
     path('carreras/', CarreraListCreateView.as_view(), name='carreras-list-create'),
     path('carreras/<int:pk>/', CarreraDetailView.as_view(), name='carreras-detail'),
     path('departamentos/', DepartamentoListCreateView.as_view(), name='departamentos-list-create'),
@@ -37,3 +54,5 @@ urlpatterns = [
     path('inscripciones/', InscripcionListCreateView.as_view(), name='inscripciones-list-create'),
     path('inscripciones/<int:pk>/', InscripcionDetailView.as_view(), name='inscripciones-detail'),
 ]
+
+urlpatterns += router.urls
