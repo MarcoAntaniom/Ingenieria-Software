@@ -21,9 +21,9 @@ cualquier entorno (ver `.env.example`).
   perfil estudiante/docente.
 
 El contrato detallado, sus envolturas, campos, permisos, paginación e
-inconsistencias está en [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md). La
-carpeta `backend/` local no está rastreada por Git y su correspondencia con el
-entorno desplegado aún no está confirmada.
+inconsistencias está en [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md). El
+código está versionado en la rama `TEST_frontend`; aún no se confirmó que
+coincida con el backend desplegado ni se ejecutaron pruebas contra staging.
 
 El panel consulta `/api/v1/academico/inscripciones/` sin enviar un ID del
 cliente. El backend filtra por el usuario autenticado cuando existe un perfil
@@ -36,7 +36,12 @@ no devuelve esos datos.
 ## Rutas y roles de interfaz
 
 - Público: `/login`.
-- Estudiante: `/dashboard` (inscripciones disponibles).
+- Estudiante: `/dashboard` (inscripciones disponibles), `/student/pending`,
+  `/tasks/:taskId` y `/receipts/:receiptId` (tareas, borrador, envío definitivo
+  y comprobante).
+- Docente: `/teacher/sections`, `/teacher/sections/:sectionId/tasks`,
+  `/teacher/tasks/new`, `/teacher/tasks/:taskId/edit` y `/teacher/review`
+  (solo secciones asignadas).
 - Todos los roles: `/profile` (solo lectura) y `/notifications` (REST,
   contador y WebSocket).
 - El resto de rutas de estudiante, docente y administración indica el bloqueo
@@ -49,6 +54,12 @@ muestran el motivo sin usar datos ficticios.
 `VITE_ENABLE_UNAVAILABLE_MODULES=true` permite mostrar sus enlaces; activarlo
 no habilita operaciones del backend. Los guards y el rol en memoria son solo
 UX: la autorización efectiva corresponde al servidor.
+
+Tareas y entregas usan `academico.Tarea` como modelo canónico. El backend
+limita las consultas a matrículas y asignaciones docentes, y valida archivos
+PDF/DOCX/ZIP hasta 50 MB. La migración requiere reasignar manualmente las
+tareas antiguas sin sección; no se debe aplicar a staging/producción hasta
+probarla con respaldo de datos.
 
 ## Sesión y seguridad
 

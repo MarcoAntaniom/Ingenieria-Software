@@ -16,6 +16,7 @@ from .models import (
     EntregaAcademica,
 )
 from .validators import validar_tamanio_archivo, validador_extensiones
+from .permissions import is_assigned_teacher
 
 
 class CarreraSerializer(serializers.ModelSerializer):
@@ -154,10 +155,20 @@ class AnuncioAcademicoSerializer(serializers.ModelSerializer):
 # --- SERIALIZADORES PARA TAREAS Y ENTREGAS CON BORRADOR ---
 
 class TareaSerializer(serializers.ModelSerializer):
+    seccion = SeccionSerializer(read_only=True)
+    seccion_id = serializers.PrimaryKeyRelatedField(
+        queryset=Seccion.objects.all(),
+        source='seccion',
+        write_only=True,
+        required=True,
+    )
+
     class Meta:
         model = Tarea
         fields = [
             'id',
+            'seccion',
+            'seccion_id',
             'titulo',
             'descripcion',
             'fecha_cierre',
@@ -165,52 +176,85 @@ class TareaSerializer(serializers.ModelSerializer):
             'aplica_penalizacion_atraso',
         ]
 
+    def validate(self, attrs):
+        seccion = attrs.get('seccion')
+        if seccion is None and self.instance:
+            seccion = self.instance.seccion
+        if not is_assigned_teacher(self.context['request'].user, seccion):
+            raise serializers.ValidationError(
+                {'seccion_id': 'Debes estar asignado a la sección de esta tarea.'}
+            )
+        return attrs
+
 
 class EntregaTareaSerializer(serializers.ModelSerializer):
     archivo = serializers.FileField(
         validators=[validador_extensiones, validar_tamanio_archivo],
-        required=False
+        required=False,
+        write_only=True,
     )
     tarea_detalles = TareaSerializer(source='tarea', read_only=True)
+    archivo_nombre = serializers.SerializerMethodField()
+    estudiante_nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = EntregaTarea
         fields = [
-            'id', 
-            'tarea', 
-            'tarea_detalles', 
-            'estudiante', 
-            'archivo', 
+            'id',
+            'tarea',
+            'tarea_detalles',
+            'estudiante_nombre',
+            'archivo',
+            'archivo_nombre',
             'estado',
-            'comentario_estudiante', 
+            'comentario_estudiante',
             'fecha_envio',
             'fecha_modificacion',
-            'fecha_envio_definitivo', 
+            'fecha_envio_definitivo',
             'es_fuera_de_plazo',
-            'exonerado_penalizacion',     
-            'calificacion_original',       
-            'calificacion_final'
+            'exonerado_penalizacion',
+            'calificacion_original',
+            'calificacion_final',
         ]
         read_only_fields = [
-            'estudiante', 
-            'estado', 
+            'tarea',
+            'estado',
             'fecha_envio',
-            'fecha_modificacion', 
-            'fecha_envio_definitivo', 
-            'es_fuera_de_plazo'
+            'fecha_modificacion',
+            'fecha_envio_definitivo',
+            'es_fuera_de_plazo',
+            'exonerado_penalizacion',
+            'calificacion_original',
+            'calificacion_final',
         ]
 
-def validate(self, data):
-        # Si la instancia ya existe, evaluamos las restricciones según su estado actual
-        if self.instance:
-            # Si está ENVIADO o EN_REVISION, el estudiante no puede modificarlo directamente
-            if self.instance.estado in [EntregaTarea.EstadoEntrega.ENVIADO, EntregaTarea.EstadoEntrega.EN_REVISION]:
-                raise serializers.ValidationError(
-                    "Esta entrega se encuentra enviada o en proceso de revisión y no puede ser modificada."
-                )
-            
-            # Si el estado es REABIERTA, permitimos que el estudiante edite o reenvíe su tarea
-            # Opcionalmente, podrías cambiar el estado de regreso a BORRADOR al momento de actualizar:
-            # data['estado'] = EntregaTarea.EstadoEntrega.BORRADOR
-            
-        return data
+    def get_archivo_nombre(self, obj):
+        return obj.archivo.name.rsplit('/', 1)[-1] if obj.archivo else None
+
+    def get_estudiante_nombre(self, obj):
+        return f'{obj.estudiante.nombres} {obj.estudiante.apellidos}'.strip()
+
+
+class TareaPendienteSerializer(TareaSerializer):
+    entrega = serializers.SerializerMethodField()
+
+    class Meta(TareaSerializer.Meta):
+        fields = TareaSerializer.Meta.fields + ['entrega']
+
+    def get_entrega(self, obj):
+        entregas = getattr(obj, 'entregas_usuario', [])
+        if not entregas:
+            return None
+
+        entrega = entregas[0]
+        return {
+            'id': entrega.id,
+            'estado': entrega.estado,
+            'archivo_nombre': (
+                entrega.archivo.name.rsplit('/', 1)[-1]
+                if entrega.archivo
+                else None
+            ),
+            'comentario_estudiante': entrega.comentario_estudiante,
+            'fecha_envio_definitivo': entrega.fecha_envio_definitivo,
+        }

@@ -1,7 +1,6 @@
 from django.utils import timezone
 from django.db import models
 from .validators import validar_tamanio_archivo, validador_extensiones
-from django.contrib.auth.models import User
 # Modelos para academico
 
 class Carrera(models.Model):
@@ -154,6 +153,13 @@ class AnuncioAcademico(models.Model):
 
 
 class Tarea(models.Model):
+    seccion = models.ForeignKey(
+        Seccion,
+        on_delete=models.PROTECT,
+        related_name='tareas',
+        null=True,
+        blank=True,
+    )
     titulo = models.CharField(max_length=200, verbose_name="Título de la Tarea")
     descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción")
     fecha_cierre = models.DateTimeField(verbose_name="Fecha límite oficial")
@@ -177,7 +183,12 @@ class EntregaTarea(models.Model):
         REABIERTA = 'REABIERTA', 'Reabierta'
 
     tarea = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name="entregas")
-    estudiante = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Estudiante") # type: ignore
+    estudiante = models.ForeignKey(
+        'usuarios.Usuarios',
+        on_delete=models.CASCADE,
+        related_name='entregas_tareas',
+        verbose_name="Estudiante",
+    )
     
     # El archivo usa los validadores de extensión y tamaño (50 MB), y puede ser nulo en estado BORRADOR
     archivo = models.FileField(
@@ -208,17 +219,10 @@ class EntregaTarea(models.Model):
     class Meta:
         verbose_name = "Entrega de Tarea"
         verbose_name_plural = "Entregas de Tareas"
-        unique_together = ('tarea', 'estudiante')
-
-    def __str__(self):
-        return f"{self.tarea.titulo} - {self.estudiante.username} [{self.estado}]"
-    class Meta:
-        verbose_name = "Entrega de Tarea"
-        verbose_name_plural = "Entregas de Tareas"
         unique_together = ('tarea', 'estudiante')  # Una única instancia de entrega/borrador activa por estudiante y tarea
 
     def __str__(self):
-        return f"{self.tarea.titulo} - {self.estudiante.username} [{self.estado}]"
+        return f"{self.tarea.titulo} - {self.estudiante.correo_institucional} [{self.estado}]"
 
     def save(self, *args, **kwargs):
         # Si se está intentando cambiar a estado ENVIADO (o se guarda de forma definitiva), 

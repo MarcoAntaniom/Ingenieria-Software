@@ -25,7 +25,7 @@ export const MODULES = [
     path: '/tasks/:taskId',
     icon: 'assignment',
     roles: ['student'],
-    blocker: 'Las rutas de tareas y entregas aún no garantizan autorización por estudiante y sección.',
+    available: true,
   },
   {
     key: 'receipt',
@@ -33,7 +33,7 @@ export const MODULES = [
     path: '/receipts/:receiptId',
     icon: 'receipt_long',
     roles: ['student'],
-    blocker: 'No existe una consulta persistente de comprobantes por estudiante.',
+    available: true,
   },
   {
     key: 'student-pending',
@@ -41,7 +41,7 @@ export const MODULES = [
     path: '/student/pending',
     icon: 'pending_actions',
     roles: ['student'],
-    blocker: 'La consulta de pendientes no filtra correctamente las secciones inscritas y requiere corregir sus relaciones.',
+    available: true,
   },
   {
     key: 'student-grades',
@@ -65,7 +65,15 @@ export const MODULES = [
     path: '/teacher/sections',
     icon: 'groups',
     roles: ['teacher'],
-    blocker: 'El listado de secciones no está limitado a las asignadas al docente.',
+    available: true,
+  },
+  {
+    key: 'teacher-section-tasks',
+    title: 'Tareas de sección',
+    path: '/teacher/sections/:sectionId/tasks',
+    icon: 'assignment',
+    roles: ['teacher'],
+    available: true,
   },
   {
     key: 'teacher-task-create',
@@ -73,7 +81,7 @@ export const MODULES = [
     path: '/teacher/tasks/new',
     icon: 'add_task',
     roles: ['teacher'],
-    blocker: 'La API de tareas no valida el rol docente ni la propiedad de la sección.',
+    available: true,
   },
   {
     key: 'teacher-task-edit',
@@ -81,7 +89,7 @@ export const MODULES = [
     path: '/teacher/tasks/:taskId/edit',
     icon: 'edit_document',
     roles: ['teacher'],
-    blocker: 'La API de tareas no valida el rol docente ni la propiedad de la sección.',
+    available: true,
   },
   {
     key: 'teacher-review',
@@ -89,7 +97,7 @@ export const MODULES = [
     path: '/teacher/review',
     icon: 'fact_check',
     roles: ['teacher'],
-    blocker: 'La API de entregas no valida la propiedad docente de la sección y la bandeja no está aislada.',
+    available: true,
   },
   {
     key: 'teacher-announcements',

@@ -9,6 +9,13 @@ const Dashboard = lazy(() => import('./components/Dashboard.jsx'))
 const ModulePage = lazy(() => import('./pages/ModulePage.jsx'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage.jsx'))
+const StudentPendingPage = lazy(() => import('./pages/StudentPendingPage.jsx'))
+const StudentTaskPage = lazy(() => import('./pages/StudentTaskPage.jsx'))
+const SubmissionReceiptPage = lazy(() => import('./pages/SubmissionReceiptPage.jsx'))
+const TeacherSectionsPage = lazy(() => import('./pages/TeacherSectionsPage.jsx'))
+const TeacherSectionTasksPage = lazy(() => import('./pages/TeacherSectionTasksPage.jsx'))
+const TeacherTaskFormPage = lazy(() => import('./pages/TeacherTaskFormPage.jsx'))
+const TeacherReviewPage = lazy(() => import('./pages/TeacherReviewPage.jsx'))
 const PermissionDeniedPage = lazy(() =>
   import('./pages/StatusPages.jsx').then((module) => ({
     default: module.PermissionDeniedPage,
@@ -119,6 +126,86 @@ function App() {
             </ProtectedRoute>
           }
           path="/dashboard"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['student']}>
+                <StudentPendingPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/student/pending"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['student']}>
+                <StudentTaskPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/tasks/:taskId"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['student']}>
+                <SubmissionReceiptPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/receipts/:receiptId"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['teacher']}>
+                <TeacherSectionsPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/teacher/sections"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['teacher']}>
+                <TeacherSectionTasksPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/teacher/sections/:sectionId/tasks"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['teacher']}>
+                <TeacherTaskFormPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/teacher/tasks/new"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['teacher']}>
+                <TeacherTaskFormPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/teacher/tasks/:taskId/edit"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['teacher']}>
+                <TeacherReviewPage />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+          path="/teacher/review"
         />
         {MODULES.filter((module) => !module.available).map((module) => (
           <Route

@@ -1,20 +1,36 @@
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from .models import EntregaTarea
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
+from django.utils import timezone
+from rest_framework.exceptions import NotFound, ValidationError
+
+from .models import EntregaTarea
+from .permissions import is_assigned_teacher
+
+
+@transaction.atomic
 def guardar_borrador_entrega(tarea, estudiante, archivo=None, comentario=None):
     """Permite crear o actualizar un avance sin marcarlo como entregado oficialmente."""
-    entrega, created = EntregaTarea.objects.get_or_create(
+    entrega, _ = EntregaTarea.objects.get_or_create(
         tarea=tarea,
         estudiante=estudiante,
         defaults={'estado': EntregaTarea.EstadoEntrega.BORRADOR}
     )
+    entrega = EntregaTarea.objects.select_for_update().get(pk=entrega.pk)
 
-    if entrega.estado == EntregaTarea.EstadoEntrega.ENVIADO:
-        raise ValidationError("La entrega ya ha sido enviada de forma definitiva y no puede modificarse.")
+    if entrega.estado not in (
+        EntregaTarea.EstadoEntrega.BORRADOR,
+        EntregaTarea.EstadoEntrega.REABIERTA,
+    ):
+        raise ValidationError("La entrega ya no admite cambios del estudiante.")
 
     if archivo:
+        try:
+            for validator in EntregaTarea._meta.get_field('archivo').validators:
+                validator(archivo)
+        except DjangoValidationError as error:
+            raise ValidationError(error.messages) from error
         entrega.archivo = archivo
     if comentario is not None:
         entrega.comentario_estudiante = comentario
@@ -23,17 +39,24 @@ def guardar_borrador_entrega(tarea, estudiante, archivo=None, comentario=None):
     return entrega
 
 
+@transaction.atomic
 def confirmar_envio_definitivo(entrega_id, estudiante):
     """
     Realiza la entrega definitiva, calcula si hay retraso y aplica 
     la penalización del 1% por hora a menos que tenga exención docente.
     """
     try:
-        entrega = EntregaTarea.objects.get(id=entrega_id, estudiante=estudiante)
+        entrega = EntregaTarea.objects.select_for_update().get(
+            id=entrega_id,
+            estudiante=estudiante,
+        )
     except EntregaTarea.DoesNotExist:
-        raise ValidationError("La entrega o borrador no existe.")
+        raise NotFound("La entrega o borrador no existe.")
 
-    if entrega.estado == EntregaTarea.EstadoEntrega.ENVIADO:
+    if entrega.estado in (
+        EntregaTarea.EstadoEntrega.ENVIADO,
+        EntregaTarea.EstadoEntrega.EN_REVISION,
+    ):
         raise ValidationError("Esta tarea ya cuenta con una entrega definitiva registrada.")
 
     if not entrega.archivo:
@@ -98,7 +121,10 @@ def cambiar_estado_revision(entrega_id, docente):
     try:
         entrega = EntregaTarea.objects.get(id=entrega_id)
     except EntregaTarea.DoesNotExist:
-        raise ValidationError("La entrega no existe.")
+        raise NotFound("La entrega no existe.")
+
+    if not is_assigned_teacher(docente, entrega.tarea.seccion):
+        raise NotFound("La entrega no existe.")
 
     if entrega.estado != EntregaTarea.EstadoEntrega.ENVIADO:
         raise ValidationError("Solo se pueden revisar entregas que hayan sido enviadas definitivamente.")
@@ -113,9 +139,17 @@ def reabrir_entrega(entrega_id, docente):
     try:
         entrega = EntregaTarea.objects.get(id=entrega_id)
     except EntregaTarea.DoesNotExist:
-        raise ValidationError("La entrega no existe.")
+        raise NotFound("La entrega no existe.")
 
-    # Cambia de estado a REABIERTA permitiendo edición nuevamente
-    entrega.estado = EntregaTarea.EstadoEntrega.REABIERTAS
+    if not is_assigned_teacher(docente, entrega.tarea.seccion):
+        raise NotFound("La entrega no existe.")
+
+    if entrega.estado not in (
+        EntregaTarea.EstadoEntrega.ENVIADO,
+        EntregaTarea.EstadoEntrega.EN_REVISION,
+    ):
+        raise ValidationError("Solo se puede reabrir una entrega enviada o en revisión.")
+
+    entrega.estado = EntregaTarea.EstadoEntrega.REABIERTA
     entrega.save()
     return entrega

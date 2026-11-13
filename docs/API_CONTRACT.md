@@ -2,12 +2,12 @@
 
 ## Fuente y estado del contrato
 
-La referencia para el trabajo actual es el código presente en `backend/`. Esa
-carpeta no está rastreada por Git en esta rama, por lo que su contenido no tiene
-un commit/version verificable y **no se puede afirmar que corresponda al
-backend desplegado**. No se hicieron solicitudes de humo a staging. Antes de
-publicar una integración, backend debe versionar y aprobar este contrato y
-confirmar el entorno desplegado.
+La referencia para el trabajo actual es el código versionado en la rama
+`TEST_frontend`, commit `7a45ec5770ae0273cecce5932d32d2ead09db47e`, junto con
+los cambios locales descritos abajo. Esto **no confirma** que esa versión esté
+desplegada. No se hicieron solicitudes de humo a staging. Antes de publicar
+una integración, backend debe aprobar el contrato y confirmar el entorno
+desplegado.
 
 Prefijo registrado: `/api/v1/`. Las vistas protegidas usan JWT
 `Authorization: Bearer <access>`. DRF está configurado con paginación por
@@ -39,11 +39,9 @@ El rol se obtiene del servidor desde `datos.rol.codigo` en `/usuarios/me/` (tamb
 
 ## Académico
 
-Las rutas de catálogo usan vistas DRF genéricas: colecciones `GET, POST`;
-detalle `GET, PUT, PATCH, DELETE`. Las colecciones son paginadas (20). En el
-código local, estas vistas solo requieren autenticación; no implementan
-permisos por rol/propiedad ni filtros específicos. No exponer sus operaciones
-de escritura en la UI hasta que el backend corrija y pruebe esos permisos.
+La mayoría de las rutas de catálogo usan vistas DRF genéricas y solo requieren
+autenticación; no exponer sus operaciones de escritura en la UI. Las rutas de
+secciones y asignaciones docentes tienen alcance específico por rol:
 
 | Endpoint | Métodos | Forma de respuesta / campos | Permisos y parámetros |
 |---|---|---|---|
@@ -52,8 +50,8 @@ de escritura en la UI hasta que el backend corrija y pruebe esos permisos.
 | `/academico/periodos-academicos/`, `/academico/periodos-academicos/{id}/` | Colección/detalle | `{id, codigo, fecha_inicio, fecha_fin, activo}` | Autenticado; `page` en colección. |
 | `/academico/estados-inscripcion/`, `/academico/estados-inscripcion/{id}/` | Colección/detalle | `{id, codigo}` | Autenticado; `page` en colección. |
 | `/academico/asignaturas/`, `/academico/asignaturas/{id}/` | Colección/detalle | `{id, carrera: {id, codigo, nombre_carrera}, codigo, nombre}` | `carrera_id` solo para escritura; autenticado. |
-| `/academico/secciones/`, `/academico/secciones/{id}/` | Colección/detalle | `{id, asignatura, periodo_academico, numero_seccion}`; objetos anidados con los campos de asignatura y periodo anteriores | IDs de relación solo para escritura; autenticado. |
-| `/academico/secciones-docentes/`, `/academico/secciones-docentes/{id}/` | Colección/detalle | `{id, seccion, docente: string, es_titular}` | IDs de relación solo para escritura; autenticado, sin filtro del docente actual. |
+| `/academico/secciones/`, `/academico/secciones/{id}/` | Colección/detalle | `{id, asignatura, periodo_academico, numero_seccion}`; objetos anidados con los campos de asignatura y periodo anteriores | `GET` limita a secciones asignadas para docente y matriculadas para estudiante; administrador puede listar todas. Escritura solo administrador. |
+| `/academico/secciones-docentes/`, `/academico/secciones-docentes/{id}/` | Colección/detalle | `{id, seccion, docente: string, es_titular}` | `GET` limita al docente autenticado; estudiante recibe lista vacía. Escritura solo administrador. |
 | `/academico/inscripciones/`, `/academico/inscripciones/{id}/` | Colección/detalle | `{id, seccion: {id, asignatura, periodo_academico, numero_seccion}, estudiante: string, estado: {id, codigo}, creado_en}` | Autenticado. El listado y detalle limitan al propio perfil únicamente cuando el usuario tiene `perfil_estudiante`; otros usuarios autenticados reciben todas las inscripciones. `?estudiante=` no se declara ni se usa. |
 
 En las inscripciones, `estudiante` es texto, no un objeto de perfil. El objeto `seccion` no incluye docente. No hay campos de avance ni tarea próxima.
@@ -63,16 +61,25 @@ En las inscripciones, `estudiante` es texto, no un objeto de perfil. El objeto `
 | Endpoint | Métodos | Parámetros / cuerpo | Respuesta de éxito | Permisos y observaciones |
 |---|---|---|---|---|
 | `/evaluaciones/create/` | `POST` | `{seccion, rubrica, titulo, instrucciones, fecha_apertura, fecha_limite, puntaje_maximo, permitir_entregas_tardias, es_visible}` | `201 { "mensaje": "Tarea creada exitosamente", "tarea": {id, seccion, rubrica, titulo, instrucciones, fecha_apertura, fecha_limite, puntaje_maximo, permitir_entregas_tardias, es_visible} }` | Autenticado, sin verificación de rol docente. No hay GET/listado/detalle/edición de tareas. |
-| `/academico/tareas/`, `/academico/tareas/{id}/` | `GET, POST`; detalle `GET, PUT, PATCH, DELETE` | Serializador del modelo `academico.Tarea` | Colección paginada; detalle según serializer | Autenticado, sin verificación de rol docente ni propiedad de sección. No usar para flujos docentes hasta corregir permisos. |
-| `/academico/entregas-tareas/`, `/academico/entregas-tareas/{id}/` | CRUD de `ModelViewSet` | Serializador del modelo `EntregaTarea` | Colección paginada o detalle según serializer | La consulta cambia entre estudiante/docente, pero no valida de forma confiable propiedad de sección ni el vínculo estudiante/usuario. Requiere pruebas y correcciones antes de integrar. |
-| `/academico/entregas-tareas/mis-pendientes/` | `GET` | Sin parámetros declarados | Lista directa de tareas | La implementación calcula secciones inscritas pero no las aplica al queryset; no usar. |
-| `/academico/entregas-tareas/guardar-borrador/` | `POST` | Multipart: `tarea`, `archivo`, `comentario_estudiante` | Entrega serializada | Autenticado; revisar vínculo de identidad, validación de archivo, excepciones y permisos antes de integrar. |
-| `/academico/entregas-tareas/{id}/confirmar-envio/` | `POST` | Sin cuerpo requerido | `{mensaje, comprobante: {id_entrega, tarea, estudiante, archivo, estado, timestamp_oficial, es_fuera_de_plazo}}` | Autenticado; el servicio verifica al estudiante, pero el alcance no está probado. La respuesta no incluye hash ni tamaño. |
-| `/academico/entregas-tareas/{id}/poner-en-revision/`, `/reabrir-entrega/` | `POST` | Sin cuerpo requerido | `{mensaje, data}` | No usar hasta verificar rol docente y propiedad de sección; las vistas capturan excepciones genéricas y responden `400`. |
+| `/academico/tareas/`, `/academico/tareas/{id}/` | Colección `GET, POST`; detalle `GET, PUT, PATCH, DELETE` | `Tarea`: `{id, seccion, titulo, descripcion, fecha_cierre, permite_atrasados, aplica_penalizacion_atraso}`. Escritura usa `seccion_id` | Colección paginada; acepta `?seccion=<id>` y `page`. Estudiante lee tareas de sus secciones; docente lee y modifica tareas solo en secciones asignadas. Crear exige docente asignado. |
+| `/academico/entregas-tareas/`, `/academico/entregas-tareas/{id}/` | `GET`; `POST` en colección no está permitido; escritura genérica no está permitida | Lista paginada. Incluye `tarea_detalles`, `estudiante_nombre`, `archivo_nombre`, estado, comentario y fechas; no entrega una URL pública de archivo. | Estudiante solo ve sus entregas. Docente solo ve entregas `ENVIADO`/`EN_REVISION` de sus secciones; admite `?estado=ENVIADO` o `?estado=EN_REVISION`. |
+| `/academico/entregas-tareas/mi-entrega/?tarea=<id>` | `GET` | Entrega serializada o `204 No Content` si aún no existe | Solo estudiante autenticado; la consulta nunca acepta un ID de estudiante. |
+| `/academico/entregas-tareas/mis-pendientes/` | `GET` | Colección paginada de tareas con sección y `entrega` propia (borrador, si existe) | Solo estudiante; limita a secciones inscritas, excluye `ENVIADO`/`EN_REVISION`, excluye vencidas no atrasables e incluye tareas vencidas que aceptan atraso. |
+| `/academico/entregas-tareas/guardar-borrador/` | `POST` | Multipart: `tarea`, opcional `archivo`, `comentario_estudiante` | Solo estudiante matriculado en la sección; archivos PDF/DOCX/ZIP hasta 50 MB. El servidor valida extensión y tamaño. Estado modificable: `BORRADOR` o `REABIERTA`. |
+| `/academico/entregas-tareas/{id}/confirmar-envio/` | `POST` | Sin cuerpo requerido | `{mensaje, comprobante: {id_entrega, tarea, estudiante, archivo, estado, timestamp_oficial, es_fuera_de_plazo}}` | Solo propietario estudiante. Una segunda confirmación se rechaza; no incluye hash ni tamaño. |
+| `/academico/entregas-tareas/{id}/comprobante/` | `GET` | Campos persistidos de comprobante: `id_entrega`, `tarea`, `estudiante`, `archivo`, `estado`, `timestamp_oficial`, `es_fuera_de_plazo` | Solo propietario y solo tras envío definitivo; otros usuarios y borradores reciben `404`. |
+| `/academico/entregas-tareas/{id}/archivo/` | `GET` | Flujo de archivo `application/octet-stream`, `Content-Disposition: attachment` | Solo estudiante propietario o docente asignado a la sección; se transmite el archivo a través del backend, no se expone URL del storage. |
+| `/academico/entregas-tareas/{id}/poner-en-revision/`, `/reabrir-entrega/` | `POST` | `{mensaje, data}` | Solo docente asignado a la sección; reabrir requiere estado `ENVIADO` o `EN_REVISION`. No implementa calificación. |
 
-El modelo `evaluaciones.Tarea` de `/evaluaciones/create/` es distinto del modelo
-`academico.Tarea`; aún debe definirse una fuente de verdad. El comprobante no
-debe completar datos que no envía el servidor.
+`academico.Tarea` es el modelo canónico del flujo implementado y ahora se
+relaciona con `Seccion`. La relación queda nullable en la base para conservar
+tareas antiguas sin sección; el API las omite y exige `seccion_id` al crear.
+Hay que asignar manualmente las tareas antiguas desde Django Admin antes de
+que vuelvan a aparecer. `EntregaTarea.estudiante` ahora referencia
+`usuarios.Usuarios`; la migración relaciona registros anteriores por correo
+institucional exacto (sin coincidencia única, la migración aborta antes de
+perder la relación). `evaluaciones.Tarea` y `/evaluaciones/create/` siguen
+siendo recursos distintos y no forman parte de esta UI.
 
 ## Notificaciones
 
@@ -105,7 +112,7 @@ límites de archivo confirmados ni descarga autorizada.
 - La respuesta de login sí envuelve los tokens y `usuario` en `datos`. `/me/` también usa `datos`; refresh no usa envoltura.
 - No existe `/usuarios/logout/`; el frontend solo limpia la sesión local.
 - No existe lectura del perfil estudiante/docente actual ni perfil embebido en `/usuarios/me/`; el campo `perfil_estudiante.id` esperado por el frontend no está disponible.
-- `EntregaTareaViewSet` está enrutado en el árbol local, pero tiene defectos de consulta/relación y no autoriza de forma suficiente las acciones docentes. No habilitarlo en frontend hasta corregir y probar estos riesgos.
+- El flujo `academico.Tarea`/`EntregaTarea` ahora filtra por matrícula y asignación docente, con comprobante y descarga protegidos; requiere aplicar y verificar la migración en el entorno de despliegue antes de usarlo allí.
 - Hay endpoints de notificaciones REST y WebSocket; para producción, evaluar autenticación WebSocket que no transmita el access token en query string.
 - Faltan rutas para calendario, lectura de perfiles estudiante/docente actuales, calificaciones, material y auditoría. La mensajería no publica listado/creación de conversaciones.
 - Los viewsets de comunicación y las APIs académicas genéricas tienen permisos insuficientes para lectura/escritura por rol o sección.

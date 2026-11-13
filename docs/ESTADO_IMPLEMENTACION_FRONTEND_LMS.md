@@ -8,25 +8,24 @@
 
 ## 1. Resumen ejecutivo
 
-Se avanzaron los fundamentos compartidos del frontend, se implementaron las
-notificaciones REST/WebSocket y un perfil de solo lectura, se corrigieron
-datos que el dashboard mostraba aunque la API no los entrega, y se hicieron
-más accesibles la navegación móvil y los diálogos. Las rutas que requieren
-permisos o contratos inexistentes ahora se ocultan por defecto y, si se abren
-directamente, explican el bloqueo concreto.
+Se implementaron los flujos locales de tareas/entregas para estudiante y
+docente: tareas por sección, borrador, envío definitivo, comprobante persistido,
+descarga protegida, secciones asignadas y bandeja de revisión. Se corrigieron
+las consultas y permisos backend de esos recursos y se agregaron pruebas de
+aislamiento. También siguen disponibles los fundamentos compartidos,
+notificaciones REST/WebSocket, perfil de solo lectura, dashboard ajustado y
+mejoras de navegación/accesibilidad.
 
-No es seguro habilitar todavía la mayoría de los módulos de estudiante,
-docente y administración. El código local del backend:
+La integración no está lista para producción: todavía requiere aplicar y
+validar la migración con datos reales y ejecutar smoke tests autorizados en
+staging. La mayoría de los módulos no relacionados (administración, cursos
+agregados, calificaciones, materiales, foros, mensajería y calendario) sigue
+bloqueada. La rama de desarrollo contiene backend versionado:
 
-- no está rastreado por Git en esta rama, por lo que no tiene una versión
-  verificable;
-- no se ha comparado con un backend desplegado ni se han ejecutado smoke tests
-  contra staging;
-- incluye rutas de tareas, entregas y comunicación, pero algunas consultan
-  datos globales, no validan rol/propiedad o tienen filtros/relaciones
-  incorrectos;
-- no ofrece APIs de calendario, calificaciones, materiales, auditoría,
-  lectura de perfil estudiante/docente ni listado de conversaciones.
+- rama `TEST_frontend`, commit base `7a45ec5770ae0273cecce5932d32d2ead09db47e`;
+- aún no se confirmó que ese commit esté desplegado;
+- las otras rutas genéricas de usuarios, catálogos, matrículas y comunicación
+  mantienen permisos insuficientes.
 
 El principio aplicado es: **no consumir una ruta solo porque existe**. También
 debe estar definido el contrato y probada la autorización de rol, sección,
@@ -34,9 +33,9 @@ propiedad y usuario. No se fabrican datos para completar pantallas.
 
 ## 2. Alcance y fuentes consultadas
 
-La decisión de usar `backend/` local como referencia permite documentar lo que
-hay en el árbol de trabajo, pero no equivale a confirmar que ese código esté
-desplegado.
+La rama `TEST_frontend` y el árbol local de `backend/` son la fuente de
+desarrollo confirmada por el usuario; eso no demuestra que la misma versión
+esté desplegada.
 
 Documentos relacionados:
 
@@ -44,9 +43,9 @@ Documentos relacionados:
 - [Contrato API revisado](./API_CONTRACT.md)
 - [README del frontend](../IngSoftwareLMS/README.md)
 
-El árbol local de `backend/` ya existía como contenido no rastreado y no se
-modificó durante esta implementación. Tampoco se modificaron los cambios
-preexistentes del README de la raíz ni de `.gitattributes`.
+Se modificaron directamente los modelos, permisos, servicios, vistas, pruebas
+y migración de `backend/apps/academico/` para completar tareas y entregas.
+También se actualizaron el contrato API, el README del frontend y este estado.
 
 ## 3. Cambios realizados en el frontend
 
@@ -180,7 +179,59 @@ dashboard para cualquier rol debe probarse y corregirse el aislamiento
 backend. El dashboard permanece protegido por rol en el cliente, pero eso no
 sustituye esa corrección.
 
-### 3.5 Navegación móvil, accesibilidad y estados
+### 3.5 Tareas, entregas y comprobantes
+
+Archivos principales:
+
+- `backend/apps/academico/models.py`
+- `backend/apps/academico/permissions.py`
+- `backend/apps/academico/views.py`
+- `backend/apps/academico/services.py`
+- `backend/apps/academico/serializers.py`
+- `backend/apps/academico/migrations/0004_tarea_seccion_alter_entregatarea_estudiante.py`
+- `IngSoftwareLMS/src/services/tasks.js`
+- `IngSoftwareLMS/src/features/academico/useTasks.js`
+- `IngSoftwareLMS/src/pages/StudentPendingPage.jsx`
+- `IngSoftwareLMS/src/pages/StudentTaskPage.jsx`
+- `IngSoftwareLMS/src/pages/SubmissionReceiptPage.jsx`
+
+`academico.Tarea` quedó acordado como modelo canónico. Las tareas nuevas
+requieren una sección, y el API limita la lectura a secciones inscritas o
+asignadas al usuario. `mis-pendientes` ahora pagina las tareas de las
+inscripciones reales, incluye el borrador propio si existe, excluye envíos
+definitivos y aplica la regla de fecha límite/atraso. Estudiantes pueden
+guardar borrador, adjuntar PDF/DOCX/ZIP hasta 50 MB, confirmar el envío y
+consultar el comprobante persistido. La descarga pasa por una ruta autenticada
+y no publica una URL directa del almacenamiento.
+
+La migración convierte `EntregaTarea.estudiante` desde `auth.User` a
+`usuarios.Usuarios` mediante una coincidencia única por correo institucional;
+si no puede asociar cada fila, aborta sin perder la relación antigua. Tareas
+históricas quedan sin sección y ocultas hasta que un administrador las asocie
+manualmente desde Django Admin. Hay que probar esta migración con respaldo
+antes de aplicarla a un entorno con datos.
+
+### 3.6 Funciones docentes: secciones y revisión
+
+Archivos principales:
+
+- `IngSoftwareLMS/src/pages/TeacherSectionsPage.jsx`
+- `IngSoftwareLMS/src/pages/TeacherSectionTasksPage.jsx`
+- `IngSoftwareLMS/src/pages/TeacherTaskFormPage.jsx`
+- `IngSoftwareLMS/src/pages/TeacherReviewPage.jsx`
+
+El docente autenticado solo consulta las secciones asignadas a su
+`PerfilDocente`; puede crear y editar tareas de esas secciones, revisar
+entregas enviadas, descargar archivos autorizados, marcar `EN_REVISION` y
+reabrirlas. Las consultas de tareas y entregas quedan limitadas también en el
+servidor. No se habilitó calificación ni edición/eliminación genérica de
+entregas.
+
+**Pendiente:** smoke tests con usuarios reales de prueba en staging y validar
+que el almacenamiento configurado permite servir archivos mediante
+`FileResponse` sin exponerlos públicamente.
+
+### 3.7 Navegación móvil, accesibilidad y estados
 
 Archivos principales:
 
@@ -205,7 +256,7 @@ Mejoras realizadas:
 pantalla, contraste, tamaños táctiles y anchos 320, 375, 768, 1024 y 1440 px.
 Las mejoras implementadas no equivalen a una certificación WCAG.
 
-### 3.6 Módulos bloqueados
+### 3.8 Módulos bloqueados
 
 Por defecto, la navegación incluye los módulos comunes funcionales y oculta
 los que dependen de capacidades o permisos todavía no seguros. El acceso
@@ -221,17 +272,17 @@ El motivo de cada bloqueo está centralizado en
 
 | Fase | Estado | Detalle |
 |---|---|---|
-| 0. Contrato | Parcial / bloqueada para producción | Se actualizó `docs/API_CONTRACT.md` a partir del árbol local. Falta commit/version del backend, aprobación del contrato y smoke test contra staging. |
+| 0. Contrato | Parcial / bloqueada para producción | Se actualizó `docs/API_CONTRACT.md`; backend base versionado en `TEST_frontend` (`7a45ec5`). Falta registrar el SHA final, aprobación del contrato y smoke test contra staging. |
 | 1. Fundamentos UI/API | Parcial | Cliente, refresh, errores, cancelación mediante `AbortSignal` en las consultas de notificaciones y paginación existente. No hay patrones completos de formularios/mutaciones para cada dominio ni suite de contratos frontend. |
 | 2. Sesión/perfil/navegación | Parcial | Login y refresh existentes; se revalida `me/` tras refresh; perfil read-only y menú por disponibilidad. Faltan logout/revocación server-side, perfil completo y edición autorizada. |
 | 3. Cursos | Parcial | Inscripciones paginadas y filtrado limitado a la página. Detalle agregado del curso no se habilita por falta de aislamiento/contrato; perfil ausente puede exponer inscripciones globales. |
-| 4. Tareas/entregas | Bloqueada | La acción `mis-pendientes` no aplica el filtro de secciones que calcula; relación de estudiante/usuario y permisos no confirmados; dos modelos de tarea; archivo/comprobante incompletos. |
+| 4. Tareas/entregas | Implementada localmente | `academico.Tarea` canónica, tareas por sección, FK de entrega alineada con `Usuarios`, filtros de inscripción, plazo, borrador/envío definitivo, comprobante persistido y descarga protegida. Falta validar/aplicar migración con datos y smoke test de staging. |
 | 5. Notificaciones | Implementada sobre el contrato local | REST, filtros, lectura, contador y WebSocket con reconexión. Falta confirmar contrato desplegado y resolver el token de WebSocket en query antes de producción. |
-| 6. Docentes | Bloqueada | Listado de secciones no aislado al docente; tareas y entregas no verifican de forma suficiente rol y propiedad; anuncios/foros pueden tener lectura global. |
+| 6. Docentes | Parcial | Secciones/tareas/entregas y acciones de revisión se limitan a asignaciones del docente. Anuncios, materiales y foros siguen bloqueados; falta E2E/staging. |
 | 7. Administración | Bloqueada | Los endpoints CRUD de usuarios/catálogos/matrículas solo exigen autenticación; auditoría no tiene endpoint. No se habilita UI administrativa. |
 | 8. Mensajes/calendario/foros | Bloqueada parcialmente | Hay rutas locales de foros y mensajes, pero aislamiento y permisos no son suficientes. Mensajería carece de listado/creación de conversaciones y calendario no está publicado. |
 | 9. Responsive/accesibilidad | Parcial | Menú móvil, foco, escape, overlays y diálogo mejorados. Faltan pruebas de pantalla, auditoría completa y validación de lector de pantalla/contraste. |
-| 10. Pruebas/despliegue | No verificada | `node --check` pasó para servicios JavaScript y `git diff --check` no detectó errores de whitespace. No se pudo ejecutar lint/build porque faltan ejecutables locales; `npm install` quedó bloqueado en la fase de reify dentro de la carpeta sincronizada. No hubo pruebas de staging/E2E. |
+| 10. Pruebas/despliegue | Parcial | `npm run lint`, `npm run build`, `manage.py check`, verificación de migraciones y 7 pruebas focalizadas Django pasan. No hubo E2E, smoke tests contra staging ni validación visual/accesible. |
 
 ## 5. Inventario de contratos locales y limitaciones
 
@@ -257,9 +308,10 @@ de despliegue.
 
 Las rutas de catálogo registradas incluyen carreras, departamentos, períodos,
 estados de inscripción, asignaturas, secciones, secciones-docentes e
-inscripciones. Las vistas genéricas aceptan operaciones CRUD y requieren
-autenticación; el código local no garantiza permisos de rol o propiedad para
-escritura.
+inscripciones. Las rutas de carreras/asignaturas/períodos/estados e
+inscripciones aún requieren revisión de permisos. Secciones y asignaciones
+docentes ahora filtran lecturas por matrícula/asignación y limitan escrituras
+a administrador.
 
 `GET academico/inscripciones/` devuelve una colección DRF paginada, usualmente
 con `count`, `next`, `previous` y `results`. El estudiante se limita por
@@ -275,32 +327,20 @@ por el usuario.
 
 ### 5.3 Tareas y entregas
 
-Hay dos modelos de tarea que no deben mezclarse sin decisión backend:
+`academico.Tarea` es el modelo acordado para esta integración; el recurso
+separado `evaluaciones.Tarea` permanece fuera de alcance. Las tareas API
+requieren sección y se limitan a estudiante inscrito/docente asignado. El
+viewset de entregas limita filas al propietario estudiante o docente de la
+sección; las acciones de revisión validan asignación. `mis-pendientes` ahora
+filtra por sección, plazo y envío definitivo, y paginación/archivo/comprobante
+tienen rutas explícitas.
 
-1. `academico.Tarea`, con rutas de lista/detalle CRUD en el código local;
-2. `evaluaciones.Tarea`, accesible por `POST evaluaciones/create/`, sin
-   listado/detalle/edición equivalente.
-
-Las rutas locales de entregas incluyen el viewset
-`academico/entregas-tareas/` y acciones para guardar borrador, confirmar
-envío, marcar en revisión, reabrir y consultar pendientes. La disponibilidad
-de una URL no significa que el flujo sea seguro:
-
-- `mis-pendientes` obtiene las secciones de matrícula pero no las aplica al
-  queryset final;
-- se debe verificar que `EntregaTarea.estudiante` use la misma identidad que
-  `request.user` y que no mezcle usuario con perfil estudiante;
-- el queryset de docente permite potencialmente todas las entregas y no
-  acredita propiedad de la sección;
-- las acciones de revisión/reapertura deben verificar que el docente esté
-  asignado a la sección correspondiente;
-- la subida no tiene un contrato confirmado de extensiones, tamaño, progreso,
-  cancelación ni descarga segura;
-- confirmar envío devuelve algunos campos de comprobante, pero no permite
-  consulta persistente completa, no ofrece necesariamente hash/tamaño y no se
-  deben crear esos campos en el cliente;
-- no se debe asumir una escala de calificación: no existe un endpoint de
-  calificación aprobado.
+La migración `0004` requiere verificar las filas antiguas de entregas: deben
+coincidir con exactamente un `Usuarios.correo_institucional`. Si faltan
+coincidencias, no aplicar el esquema sin reconciliar esas filas; el proceso
+falla antes de retirar la FK vieja. Las tareas existentes sin sección quedan
+ocultas hasta asignarles una sección desde Django Admin. No hay calificaciones
+ni historial de auditoría aprobado; no se exponen en la UI.
 
 ### 5.4 Notificaciones
 
@@ -344,13 +384,13 @@ No hay un contrato local completo para:
 - catálogo de conversaciones, participantes y creación de conversaciones;
 - materiales de curso y descarga autorizada;
 - eventos de auditoría con filtros/permisos/retención;
-- consulta persistente por usuario de comprobantes de entrega.
 
 ## 6. Trabajo pendiente: tareas ejecutables
 
 ### Prioridad 0 — Congelar y aprobar backend
 
-1. Rastrear/versionar `backend/` en una rama o commit aprobado por el equipo.
+1. El backend base está versionado en `TEST_frontend` (`7a45ec5`); registrar el
+   SHA final que resulte de estos cambios.
 2. Registrar el SHA/version del backend que se ejecuta en staging/producción.
 3. Comparar `config/urls.py`, `apps/*/urls.py`, vistas, serializers, modelos,
    autenticación, permisos y settings del WebSocket con el contrato de
@@ -365,12 +405,19 @@ backend/frontend y respuestas de staging registradas sin secretos.
 
 ### Prioridad 1 — Arreglar autorización y aislamiento de datos
 
-Implementar en backend permisos de servidor para:
+Se implementaron permisos de servidor para el flujo de tareas y entregas:
+
+- estudiante únicamente sobre tareas de secciones inscritas y sus entregas;
+- docente únicamente sobre secciones asignadas, tareas y entregas de esas
+  secciones;
+- descargas de archivos y comprobantes limitadas al propietario/docente
+  autorizado.
+
+Siguen pendientes los permisos de servidor para:
 
 - administrador en altas/cambios de usuarios, perfiles, catálogos y matrículas;
-- estudiante únicamente sobre sus inscripciones, tareas, entregas y
-  comprobantes;
-- docente únicamente sobre secciones asignadas y recursos de esas secciones;
+- estudiante únicamente sobre sus inscripciones (el endpoint actual conserva
+  un riesgo para usuarios sin perfil);
 - lectura y escritura de anuncios, foros, temas y respuestas según sección y
   propiedad;
 - acceso a mensajes solo para participantes de la conversación.
@@ -385,27 +432,27 @@ actualización, borrado y acciones especiales.
 
 ### Prioridad 2 — Unificar tareas/entregas y corregir pendientes
 
-1. Decidir si `academico.Tarea` o `evaluaciones.Tarea` es canónico; documentar
-   migración y relaciones a sección/curso.
-2. Corregir `mis-pendientes` para:
+1. `academico.Tarea` queda acordado como canónico; la relación `seccion` y la
+   migración de estudiante a `usuarios.Usuarios` están implementadas.
+2. `mis-pendientes` ahora:
    - usar las secciones reales inscritas por el usuario autenticado;
    - filtrar tareas por esas secciones;
    - excluir envíos definitivos de ese usuario;
-   - definir vencidas, entregas tardías permitidas y zona horaria;
-   - paginar y admitir solo filtros backend implementados.
-3. Alinear los campos FK de estudiante/docente con el modelo personalizado
-   `Usuarios` y sus perfiles.
-4. Definir CRUD de tareas con permiso docente por sección.
-5. Definir entrega con borrador, multipart, tamaño/extensiones, progreso o
-   cancelación, idempotencia, cierre definitivo, estados y reapertura.
-6. Definir consulta autorizada de entrega/comprobante por tarea y usuario,
-   incluyendo solo campos que el servidor genere y persista.
+   - incluye vencidas solo si se permiten atrasos y pagina resultados.
+3. FK de estudiante usa `Usuarios`; asignación docente usa
+   `PerfilDocente.usuario`.
+4. CRUD de tareas restringido al docente asignado a la sección.
+5. Flujo de entrega implementado con borrador, multipart, límite de archivo,
+   confirmación única, comprobante, descarga autorizada y reapertura.
+6. Falta aplicar y validar la migración con un respaldo, asignar sección a
+   tareas históricas y confirmar contrato/almacenamiento en staging.
 7. Implementar calificación solo después de aprobar escala, permisos,
    historial/auditoría y contrato.
 
-**Criterio de aceptación:** pruebas para estudiante inscrito/no inscrito,
-docente asignado/no asignado, tareas antes/después de fecha límite, envío
-definitivo duplicado, borrador, reapertura y archivo inválido/sobredimensionado.
+**Criterio local cumplido:** pruebas para estudiante inscrito/no inscrito,
+docente asignado/no asignado, plazos, borrador, envío, comprobante, descarga,
+reapertura y archivo inválido. Falta verificación de migración sobre una copia
+de datos representativa.
 
 ### Prioridad 3 — Completar perfil y sesión
 
@@ -424,10 +471,11 @@ desactivada, logout en servidor, CSRF/CORS y acceso cruzado a perfiles.
 
 ### Prioridad 4 — Completar dominios docente/administración/comunicación
 
-Una vez arreglados permisos y contratos:
+Una vez arreglados permisos y contratos restantes:
 
-- **Docente:** listar solo secciones asignadas; crear/editar tareas; listar
-  entregas paginadas; revisar/reabrir; crear anuncios asociados a sección;
+- **Docente (parcial):** listar secciones asignadas; crear/editar tareas;
+  listar entregas paginadas; revisar/reabrir. Falta crear anuncios asociados a
+  sección;
   cargar/descargar material; moderar foros con reglas claras.
 - **Administración:** usuarios y perfiles, catálogos académicos y matrículas
   paginadas/buscables; manejar conflictos de correo/RUT y restricciones de
@@ -469,14 +517,14 @@ Para cada endpoint aprobado:
 | `/profile` | Solo lectura, RUT enmascarado | Perfil estudiante/docente actual y contrato de edición seguro. |
 | `/notifications` | REST, contador, filtros, lectura y WebSocket | Confirmar contrato desplegado; eliminar/mitigar token en query y probar reconexión en staging. |
 | `/courses/:courseId` | Bloqueado con explicación | Endpoint agregado que compruebe inscripción y filtre cada recurso por sección/usuario. |
-| `/student/pending` | Bloqueado | Corregir filtro de secciones/entregas, relación de usuario y permisos. |
-| `/tasks/:taskId` | Bloqueado | Modelo canónico, detalle autorizado y operaciones soportadas. |
-| `/receipts/:receiptId` | Bloqueado | Consulta persistente del comprobante por usuario, datos verificables y descarga/impresión aprobada. |
+| `/student/pending` | Implementado localmente | Filtrado de matrículas/plazos/entregas; falta ejecutar E2E y probar con backend desplegado. |
+| `/tasks/:taskId` | Implementado localmente | Detalle, borrador y envío definitivo autorizados; falta E2E y validar la migración en una copia de datos. |
+| `/receipts/:receiptId` | Implementado localmente | Comprobante persistido y descarga autenticada; falta validar almacenamiento/headers en staging. |
 | `/student/grades` | Bloqueado | Endpoint y contrato de calificaciones autorizado. |
 | `/messages` | Bloqueado | Conversaciones/participantes/historial, permisos, paginación y UX de reintento. |
-| `/teacher/sections` | Bloqueado | Endpoint que devuelva solo secciones asignadas al docente autenticado. |
-| `/teacher/tasks/*` | Bloqueado | CRUD por docente/propiedad, sección válida, modelo canónico y validaciones. |
-| `/teacher/review` | Bloqueado | Bandeja paginada y acciones autorizadas por sección/rol; definir calificación aparte. |
+| `/teacher/sections` | Implementado localmente | Solo secciones asignadas; falta E2E y verificación de staging. |
+| `/teacher/tasks/*` | Implementado localmente | CRUD restringido por docente/sección; falta E2E y validar datos históricos. |
+| `/teacher/review` | Implementado localmente | Bandeja y acciones autorizadas de revisión/reapertura; calificación sigue fuera de alcance. |
 | `/teacher/announcements` | Bloqueado | Recurso canónico, vínculo de sección y permisos de lectura/edición. |
 | `/teacher/material` | Bloqueado | Almacenamiento, límites, metadatos y descarga autorizada. |
 | `/teacher/forums` | Bloqueado | Aislamiento por sección y permisos de moderación. |
@@ -490,45 +538,23 @@ Para cada endpoint aprobado:
 
 ### 8.1 Estado de ejecución local
 
-- `node --check` pasó para `api.js`, `auth.js`, `api-errors.js`,
-  `notifications.js` y `features/notificaciones/useNotifications.js`.
-- `git diff --check` no reportó errores de whitespace. Git sí mostró avisos de
-  conversión LF/CRLF en archivos preexistentes `.gitattributes` y README de la
-  raíz; no se modificaron para esta tarea.
-- `npm run lint` no se pudo ejecutar: `eslint` no está disponible en
-  `IngSoftwareLMS/node_modules`.
-- `npm run build` no se pudo ejecutar: `vite` no está disponible en
-  `IngSoftwareLMS/node_modules`.
-- Se intentó restaurar dependencias con `npm install` y con
-  `npm install --ignore-scripts --no-audit --no-fund --prefer-offline`; ambos
-  quedaron consumiendo CPU en la fase `reify` dentro del `node_modules`
-  sincronizado por OneDrive. Se detuvieron los procesos; no se modificaron
-  `package.json` ni `package-lock.json`.
-- No se ejecutó backend test suite, E2E, smoke test contra staging ni prueba
-  visual con navegador.
+- `npm run lint` pasó desde `IngSoftwareLMS/`.
+- `npm run build` pasó desde `IngSoftwareLMS/` con Vite 8.3.4.
+- `backend/venv/Scripts/python.exe manage.py check` pasó.
+- `makemigrations --check --dry-run` no detectó migraciones adicionales.
+- `manage.py test apps.academico.tests --verbosity 1` pasó (7 pruebas).
+- No se ejecutaron E2E, smoke tests contra staging ni prueba visual con navegador.
 
-### 8.2 Comandos que deben ejecutarse cuando se restaure el entorno
+### 8.2 Verificaciones pendientes
 
-Desde PowerShell, en la carpeta del frontend:
-
-```powershell
-Set-Location IngSoftwareLMS
-npm ci
-npm run lint
-npm run build
-```
-
-Después:
-
-1. Ejecutar las pruebas Django relacionadas con usuarios, académico,
-   evaluaciones, comunicación y notificaciones, según la configuración del
-   repositorio.
-2. Levantar backend y frontend de desarrollo; verificar login/refresh,
-   dashboard, notificaciones REST y WebSocket.
-3. Probar los casos de permisos cruzados antes de habilitar módulos
-   administrativos/docentes.
-4. Ejecutar E2E de estudiante, docente y administrador solo cuando existan
-   endpoints y usuarios de prueba autorizados.
+1. Probar la migración `0004` sobre una copia de datos: correspondencia única
+   de correos, tareas históricas sin sección y archivos almacenados.
+2. Ejecutar las suites Django de usuarios, evaluaciones, comunicación y
+   notificaciones, además de las 7 pruebas de `apps.academico.tests`.
+3. Levantar backend y frontend de desarrollo; verificar login/refresh,
+   dashboard, tareas, entregas, comprobantes y notificaciones REST/WebSocket.
+4. Probar permisos cruzados y flujos E2E de estudiante/docente con usuarios
+   de prueba autorizados antes del despliegue.
 5. Validar anchos 320, 375, 768, 1024 y 1440 px y zoom al 200 %; comprobar
    ausencia de scroll horizontal, teclado, foco, Escape y lector de pantalla.
 6. Repetir smoke tests en staging con HTTPS/WSS, CORS y headers de seguridad
@@ -536,8 +562,10 @@ Después:
 
 ## 9. Checklist de seguridad y privacidad para producción
 
-- [ ] Confirmar el SHA/version del backend desplegado y versionar la fuente
-      local.
+- [ ] Confirmar el SHA final versionado y compararlo con la versión del backend
+      desplegado.
+- [ ] Probar la migración `0004` con respaldo, reconciliar entregas legadas y
+      asignar sección a tareas históricas.
 - [ ] Probar autorización en servidor; no considerar los guards React como
       control de acceso.
 - [ ] Asegurar aislamiento por usuario, perfil, sección, participación y
