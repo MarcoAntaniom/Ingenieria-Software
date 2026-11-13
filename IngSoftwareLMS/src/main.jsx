@@ -4,14 +4,20 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
+import { ThemeProvider } from './contexts/ThemeContext.jsx'
+import { LanguageProvider } from './contexts/LanguageContext.jsx'
 
-// Monta el router y el estado de autenticación para todas las páginas.
+// Monta el router, proveedores de tema (Dark Mode), i18n y autenticación para toda la aplicación.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,
 )

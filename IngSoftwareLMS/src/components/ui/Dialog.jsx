@@ -59,7 +59,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px] animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
@@ -71,35 +71,35 @@ export function Dialog({
         aria-describedby={description || subtitle ? 'dialog-description' : undefined}
         aria-labelledby="dialog-title"
         aria-modal="true"
-        className={`relative w-full ${sizeClasses[size] || sizeClasses.md} rounded-[14px] border border-[#dbe3ec] bg-white p-0 shadow-[0_18px_50px_rgba(15,23,42,0.18)] outline-none overflow-hidden block`}
+        className={`relative w-full ${sizeClasses[size] || sizeClasses.md} rounded-2xl border border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-white bg-white dark:bg-[#1D2F46] [data-theme=contrast]_&:bg-[#0D0D0D] p-0 shadow-2xl outline-none overflow-hidden block`}
         open
         ref={dialogRef}
         tabIndex={-1}
       >
         {/* Cabecera estructurada */}
-        <div className="flex items-start justify-between border-b border-[#dbe3ec] p-5 sm:p-6 bg-white">
+        <div className="flex items-start justify-between border-b border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] p-5 sm:p-6 bg-white dark:bg-[#1D2F46] [data-theme=contrast]_&:bg-[#0D0D0D]">
           <div className="min-w-0 pr-6">
             {subtitle && (
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-[#075477] mb-1">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-[#0B5575] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] mb-1">
                 {subtitle}
               </span>
             )}
             <h2
-              className="text-lg sm:text-xl font-extrabold text-[#172033] tracking-tight leading-snug"
+              className="text-lg sm:text-xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white tracking-tight leading-snug"
               id="dialog-title"
             >
               {title}
             </h2>
             {description && (
-              <p className="mt-1 text-xs text-[#64748b] leading-relaxed" id="dialog-description">
+              <p className="mt-1 text-xs text-[#475569] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-[#F2F2F2] leading-relaxed" id="dialog-description">
                 {description}
               </p>
             )}
           </div>
 
           <button
-            aria-label="Cerrar ventana modal"
-            className="grid size-8 shrink-0 place-items-center rounded-[8px] text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#172033] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#075477]"
+            aria-label="Cerrar modal"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] dark:text-[#94A3B8] dark:hover:bg-[#16243A] dark:hover:text-[#F8FAFC] [data-theme=contrast]_&:text-white [data-theme=contrast]_&:hover:bg-[#262626] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400]"
             onClick={onClose}
             type="button"
           >
@@ -109,14 +109,14 @@ export function Dialog({
           </button>
         </div>
 
-        {/* Contenido principal con scroll interno controlado */}
-        <div className="max-h-[calc(85vh-140px)] overflow-y-auto p-5 sm:p-6 text-xs text-[#172033]">
+        {/* Cuerpo del contenido */}
+        <div className="p-5 sm:p-6 text-xs sm:text-sm text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">
           {children}
         </div>
 
-        {/* Acciones finales */}
+        {/* Pie opcional para acciones de cierre/confirmación */}
         {footer && (
-          <div className="flex items-center justify-between border-t border-[#dbe3ec] bg-[#f8fafc] px-5 py-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#F8FAFC] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] p-4 sm:p-5">
             {footer}
           </div>
         )}
@@ -124,3 +124,5 @@ export function Dialog({
     </div>
   )
 }
+
+export default Dialog

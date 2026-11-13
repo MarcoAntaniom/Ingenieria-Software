@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export function SyllabusModal({ course, isOpen, onClose }) {
+  const { t } = useLanguage()
   const [downloading, setDownloading] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState(false)
   const [expandedUnit, setExpandedUnit] = useState(0) // Unidad expandida por defecto
@@ -68,19 +70,19 @@ export function SyllabusModal({ course, isOpen, onClose }) {
               variant="secondary"
             >
               {downloading
-                ? 'Descargando...'
-                : 'Descargar syllabus oficial · PDF · 1.2 MB'}
+                ? t('syllabus_modal.downloading')
+                : t('syllabus_modal.download_pdf')}
             </Button>
             {downloadSuccess && (
               <span className="text-[11px] font-bold text-[#16856a] flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">check_circle</span>
-                Descargado con éxito
+                {t('syllabus_modal.download_success')}
               </span>
             )}
           </div>
 
           <Button onClick={onClose} size="sm" variant="primary">
-            Entendido
+            {t('syllabus_modal.understood')}
           </Button>
         </div>
       }
@@ -88,20 +90,20 @@ export function SyllabusModal({ course, isOpen, onClose }) {
       open={isOpen}
       size="lg"
       subtitle={`${course.code} ${course.section ? `· Sección ${course.section}` : ''}`}
-      title="Programa de Asignatura y Syllabus Oficial"
+      title={t('syllabus_modal.title')}
     >
       <div className="space-y-5">
         {/* Régimen de Calificaciones Compacto (Recomendación 6) */}
-        <div className="rounded-[10px] border border-[#dbe3ec] bg-[#f8fafc] p-4 space-y-3">
+        <div className="rounded-[10px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#f8fafc] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#172033]">
-              Ponderación y Régimen de Calificaciones
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">
+              {t('syllabus_modal.grading_scheme')}
             </h3>
-            <span className="text-[11px] font-bold text-[#075477]">Escala 1.0 - 7.0 (Aprobación: 4.0)</span>
+            <span className="text-[11px] font-bold text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF]">{t('syllabus_modal.grading_scale')}</span>
           </div>
 
           {/* Barra segmentada horizontal */}
-          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[#e2e8f0]">
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[#e2e8f0] dark:bg-[#2A3A52] [data-theme=contrast]_&:bg-black [data-theme=contrast]_&:border [data-theme=contrast]_&:border-[#A6A6A6]">
             {gradingScheme.map((g, idx) => (
               <div
                 className={`${g.color} transition-all duration-300`}
@@ -115,9 +117,9 @@ export function SyllabusModal({ course, isOpen, onClose }) {
           {/* Desglose compacto en lista */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
             {gradingScheme.map((item, idx) => (
-              <div className="flex items-center justify-between rounded-[8px] border border-[#dbe3ec] bg-white px-2.5 py-1.5" key={idx}>
-                <span className="truncate pr-2 font-medium text-[#172033]">{item.name}</span>
-                <span className="font-extrabold text-[#075477] shrink-0">{item.weight}%</span>
+              <div className="flex items-center justify-between rounded-[8px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-black px-2.5 py-1.5" key={idx}>
+                <span className="truncate pr-2 font-medium text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">{item.name}</span>
+                <span className="font-extrabold text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] shrink-0">{item.weight}%</span>
               </div>
             ))}
           </div>
@@ -125,8 +127,8 @@ export function SyllabusModal({ course, isOpen, onClose }) {
 
         {/* Acordeones para Unidades Temáticas (Recomendación 6) */}
         <div className="space-y-2.5">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#172033]">
-            Unidades de Aprendizaje y Contenidos
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">
+            {t('syllabus_modal.learning_units')}
           </h3>
 
           <div className="space-y-2">
@@ -135,51 +137,51 @@ export function SyllabusModal({ course, isOpen, onClose }) {
 
               return (
                 <div
-                  className="rounded-[10px] border border-[#dbe3ec] bg-white transition-all overflow-hidden"
+                  className="rounded-[10px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] transition-all overflow-hidden"
                   key={u.unit}
                 >
                   <button
                     aria-expanded={isExpanded}
-                    className="flex w-full items-center justify-between p-3.5 text-left hover:bg-[#f8fafc] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#075477]"
+                    className="flex w-full items-center justify-between p-3.5 text-left hover:bg-[#f8fafc] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#075477] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400]"
                     onClick={() => setExpandedUnit(isExpanded ? null : idx)}
                     type="button"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <span className="grid size-6 place-items-center rounded-full bg-[#E8F3F8] text-[11px] font-extrabold text-[#075477] shrink-0">
+                      <span className="grid size-6 place-items-center rounded-full bg-[#E8F3F8] dark:bg-[#102F46] [data-theme=contrast]_&:bg-[#1A1A1A] text-[11px] font-extrabold text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] shrink-0">
                         {u.unit}
                       </span>
                       <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-[#172033] truncate">{u.title}</h4>
-                        <p className="text-[11px] text-[#64748b] truncate mt-0.5">{u.summary}</p>
+                        <h4 className="text-xs font-bold text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white truncate">{u.title}</h4>
+                        <p className="text-[11px] text-[#64748b] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9] truncate mt-0.5">{u.summary}</p>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-lg text-[#64748b] transition-transform duration-200 shrink-0">
+                    <span className="material-symbols-outlined text-lg text-[#64748b] dark:text-[#94A3B8] [data-theme=contrast]_&:text-white transition-transform duration-200 shrink-0">
                       {isExpanded ? 'expand_less' : 'expand_more'}
                     </span>
                   </button>
 
                   {/* Detalle expandible del acordeón */}
                   {isExpanded && (
-                    <div className="border-t border-[#dbe3ec] bg-[#f8fafc] p-3.5 space-y-2.5 text-xs">
+                    <div className="border-t border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#f8fafc] dark:bg-[#111B2E] [data-theme=contrast]_&:bg-black p-3.5 space-y-2.5 text-xs">
                       <div>
-                        <span className="font-bold text-[#075477] block text-[11px] uppercase tracking-wide">
-                          Resultados de Aprendizaje
+                        <span className="font-bold text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] block text-[11px] uppercase tracking-wide">
+                          {t('syllabus_modal.learning_outcomes')}
                         </span>
-                        <p className="text-[#172033] mt-0.5 leading-relaxed">{u.learningOutcomes}</p>
+                        <p className="text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white mt-0.5 leading-relaxed">{u.learningOutcomes}</p>
                       </div>
 
                       <div>
-                        <span className="font-bold text-[#075477] block text-[11px] uppercase tracking-wide">
-                          Contenidos Principales
+                        <span className="font-bold text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] block text-[11px] uppercase tracking-wide">
+                          {t('syllabus_modal.main_contents')}
                         </span>
-                        <p className="text-[#64748b] mt-0.5 leading-relaxed">{u.contents}</p>
+                        <p className="text-[#64748b] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-[#D9D9D9] mt-0.5 leading-relaxed">{u.contents}</p>
                       </div>
 
                       <div>
-                        <span className="font-bold text-[#075477] block text-[11px] uppercase tracking-wide">
-                          Actividades Evaluativas Asociadas
+                        <span className="font-bold text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] block text-[11px] uppercase tracking-wide">
+                          {t('syllabus_modal.eval_activities')}
                         </span>
-                        <p className="text-[#64748b] mt-0.5 leading-relaxed">{u.activities}</p>
+                        <p className="text-[#64748b] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-[#D9D9D9] mt-0.5 leading-relaxed">{u.activities}</p>
                       </div>
                     </div>
                   )}
@@ -190,9 +192,9 @@ export function SyllabusModal({ course, isOpen, onClose }) {
         </div>
 
         {/* Metadatos Curriculares */}
-        <div className="flex flex-wrap items-center justify-between rounded-[8px] border border-[#dbe3ec] bg-white p-3 text-xs text-[#64748b]">
-          <span>Requisito previo curricular: <strong className="text-[#172033]">INF-204 Estructuras de Datos</strong></span>
-          <span>Créditos SCT: <strong className="text-[#172033]">6 Créditos</strong></span>
+        <div className="flex flex-wrap items-center justify-between rounded-[8px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] p-3 text-xs text-[#64748b] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+          <span>{t('syllabus_modal.prereq_label')} <strong className="text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">INF-204 Estructuras de Datos</strong></span>
+          <span>{t('syllabus_modal.credits_label')} <strong className="text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">6 Créditos</strong></span>
         </div>
       </div>
     </Dialog>

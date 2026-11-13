@@ -1,56 +1,363 @@
-/* Carga Tailwind y su configuración personalizada del proyecto. */
+/* Carga Tailwind y su configuración personalizada del proyecto */
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-/* Define los tokens globales recomendados y la apariencia de la página. */
-:root {
+/* Variante personalizada para activación de Modo Oscuro vía clase .dark en <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Define los tokens globales semánticos del sistema de diseño */
+:root,
+[data-theme="light"] {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Tokens de color del sistema de diseño */
-  --color-primary: #075477;
-  --color-primary-hover: #064563;
-  --color-accent: #14b8a6;
+  /* Modo Claro por Defecto */
+  --color-canvas: #F6F8FB;
+  --color-bg: #F6F8FB;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  --color-surface-subtle: #F8FAFC;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #E2E8F0;
+  --color-border-hover: #CBD5E1;
+  --color-border-strong: #94A3B8;
+  --color-text: #0F172A;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
 
-  --color-text: #172033;
-  --color-text-secondary: #64748b;
-  --color-background: #f5f7fb;
-  --color-surface: #ffffff;
-  --color-border: #dbe3ec;
+  /* Colores Primarios */
+  --color-primary: #0B5575;
+  --color-primary-dark: #074968;
+  --color-primary-hover: #074968;
+  --color-primary-light: #126A8D;
+  --color-primary-text: #0B5575;
+  --color-primary-subtle: #EFF8FB;
+  --color-primary-button-bg: #0B5575;
+  --color-primary-button-text: #FFFFFF;
 
-  --color-success: #16856a;
-  --color-warning: #b7791f;
-  --color-danger: #c53030;
+  /* Acentos y Éxito */
+  --color-accent: #087F78;
+  --color-accent-hover: #066B65;
+  --color-accent-light: #14B8A6;
+  --color-accent-text: #067647;
+  --color-accent-button: #087F78;
 
+  --color-success: #067647;
+  --color-success-bg: #ECFDF3;
+  --color-success-text: #067647;
+  --color-success-border: #A6F4C5;
+
+  /* Advertencia y Peligro */
+  --color-warning: #B54708;
+  --color-warning-bg: #FFFAEB;
+  --color-warning-text: #B54708;
+  --color-warning-border: #FEDF89;
+
+  --color-danger: #B42318;
+  --color-danger-bg: #FEF3F2;
+  --color-danger-text: #B42318;
+  --color-danger-border: #FECDCA;
+
+  --color-info: #0B5575;
+  --color-info-bg: #EFF8FB;
+  --color-info-text: #0B5575;
+  --color-info-border: #BAE6FD;
+
+  --color-selection-bg: #EFF8FB;
+  --color-selection-text: #0B5575;
+
+  --color-focus: #0B5575;
+  --color-progress-track: #E2E8F0;
+  --color-progress-fill: #0B5575;
+
+  /* Radios */
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
 
-  --shadow-card: 0 3px 12px rgb(15 23 42 / 6%);
-  --shadow-dialog: 0 18px 50px rgb(15 23 42 / 18%);
+  /* Elevación */
+  --shadow-card: 0 3px 12px rgba(15, 23, 42, 0.06);
+  --shadow-dialog: 0 18px 50px rgba(15, 23, 42, 0.18);
 
-  color: var(--color-text);
-  background: var(--color-background);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  color-scheme: light;
 }
 
-/* Asegura que la aplicación ocupe al menos el alto de la ventana. */
+/* Modo Oscuro Activado: Azul grafito institucional #0B1220, superficies diferenciadas y acentos cyan/turquesa */
+[data-theme="dark"],
+html.dark:not([data-theme="contrast"]):not(.contrast-mode) {
+  --color-bg: #0B1220;
+  --color-canvas: #0B1220;
+  --color-surface: #111B2E;
+  --color-surface-2: #16243A;
+  --color-surface-3: #1D2F46;
+  --color-surface-elevated: #16243A;
+  --color-surface-hover: #1D2F46;
+  --color-surface-subtle: #0B1220;
+  --color-sidebar: #0F192A;
+
+  --color-border: #2A3A52;
+  --color-border-subtle: #2A3A52;
+  --color-border-hover: #5D718B;
+  --color-border-strong: #5D718B;
+
+  --color-text: #F8FAFC;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
+
+  --color-primary: #0E7490;
+  --color-primary-dark: #155E75;
+  --color-primary-hover: #155E75;
+  --color-primary-active: #164E63;
+  --color-primary-light: #67E8F9;
+  --color-primary-text: #67E8F9;
+  --color-primary-subtle: #123B49;
+  --color-primary-button-bg: #0E7490;
+  --color-primary-button-text: #FFFFFF;
+
+  --color-accent: #14B8A6;
+  --color-accent-hover: #115E59;
+  --color-accent-light: #5EEAD4;
+  --color-accent-text: #5EEAD4;
+  --color-accent-dark: #0F766E;
+  --color-accent-button: #0F766E;
+
+  --color-success: #6EE7B7;
+  --color-success-bg: #123B30;
+  --color-success-text: #6EE7B7;
+  --color-success-border: #0F766E;
+
+  --color-warning: #FCD34D;
+  --color-warning-bg: #422C0A;
+  --color-warning-text: #FCD34D;
+  --color-warning-border: #78350F;
+
+  --color-danger: #FCA5A5;
+  --color-danger-bg: #46191D;
+  --color-danger-text: #FCA5A5;
+  --color-danger-border: #7F1D1D;
+
+  --color-info: #7DD3FC;
+  --color-info-bg: #102F46;
+  --color-info-text: #7DD3FC;
+  --color-info-border: #155E75;
+
+  --color-selection-bg: #123B49;
+  --color-selection-text: #67E8F9;
+
+  --color-focus: #67E8F9;
+  --color-progress-track: #2A3A52;
+  --color-progress-fill: #2DD4BF;
+
+  --shadow-card: none;
+  --shadow-dialog: none;
+
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  color-scheme: dark;
+}
+
+/* Modo Contraste Alto Activado: WCAG 2.1 AAA - Fondo negro puro, 3 niveles de borde (#A6A6A6, #FFFFFF, #FFD400) */
+[data-theme="contrast"],
+html.contrast-mode {
+  --color-bg: #000000;
+  --color-canvas: #000000;
+  --color-surface: #0D0D0D;
+  --color-surface-2: #1A1A1A;
+  --color-surface-3: #262626;
+  --color-surface-elevated: #1A1A1A;
+  --color-surface-hover: #262626;
+  --color-surface-subtle: #000000;
+  --color-sidebar: #0D0D0D;
+
+  --color-border: #A6A6A6;
+  --color-border-muted: #A6A6A6;
+  --color-border-subtle: #A6A6A6;
+  --color-border-hover: #FFFFFF;
+  --color-border-strong: #FFFFFF;
+
+  --color-text: #FFFFFF;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #F2F2F2;
+  --color-text-muted: #D9D9D9;
+
+  --color-primary: #00B7FF;
+  --color-primary-dark: #66D9FF;
+  --color-primary-hover: #66D9FF;
+  --color-primary-light: #66D9FF;
+  --color-primary-text: #66D9FF;
+  --color-primary-subtle: #1A1A1A;
+  --color-primary-button-bg: #FFFFFF;
+  --color-primary-button-text: #000000;
+
+  --color-accent: #00F084;
+  --color-warning: #FFE600;
+  --color-danger: #FF5A67;
+  --color-info: #66D9FF;
+
+  --color-success: #00F084;
+  --color-success-bg: #00F084;
+  --color-success-text: #000000;
+  --color-success-border: #00F084;
+
+  --color-warning-bg: #FFE600;
+  --color-warning-text: #000000;
+  --color-warning-border: #FFE600;
+
+  --color-danger-bg: #FF5A67;
+  --color-danger-text: #000000;
+  --color-danger-border: #FF5A67;
+
+  --color-info-bg: #66D9FF;
+  --color-info-text: #000000;
+  --color-info-border: #66D9FF;
+
+  --color-selection-bg: #1A1A1A;
+  --color-selection-text: #00B7FF;
+
+  --color-focus: #FFD400;
+  --color-progress-track: #000000;
+  --color-progress-fill: #00F084;
+
+  --shadow-card: none;
+  --shadow-dialog: none;
+
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--color-background);
-  color: var(--color-text);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Permite que la raíz de React se extienda a toda la pantalla. */
 #root {
   min-height: 100vh;
 }
 
-/* Configura la fuente de iconos Material Symbols usada en la interfaz. */
+/* Tabular figures para columnas numéricas y ponderaciones (WCAG / EdTech) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Anillos de foco accesibles con outline compensado según modo visual (WCAG 2.1 AA/AAA) */
+:focus-visible {
+  outline: 3px solid var(--color-focus, #0B5575);
+  outline-offset: 3px;
+}
+
+[data-theme="dark"] :focus-visible {
+  outline: 3px solid #67E8F9 !important;
+  outline-offset: 3px !important;
+}
+
+[data-theme="contrast"] :focus-visible,
+html.contrast-mode :focus-visible {
+  outline: 3px solid #FFD400 !important;
+  outline-offset: 3px !important;
+}
+
+/* Hover de superficies interactivas */
+[data-theme="dark"] .interactive:hover {
+  background-color: #1D2F46 !important;
+}
+
+[data-theme="contrast"] .interactive:hover {
+  background-color: #262626 !important;
+  border-color: #FFFFFF !important;
+}
+
+/* Botón primario en modo Alto Contraste: fondo blanco, texto negro, borde blanco; hover amarillo */
+[data-theme="contrast"] .btn-primary,
+[data-theme="contrast"] button.btn-primary,
+html.contrast-mode .btn-primary,
+html.contrast-mode button.btn-primary {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border: 2px solid #FFFFFF !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="contrast"] .btn-primary:hover,
+[data-theme="contrast"] button.btn-primary:hover,
+html.contrast-mode .btn-primary:hover,
+html.contrast-mode button.btn-primary:hover {
+  background-color: #FFD400 !important;
+  color: #000000 !important;
+  border-color: #FFD400 !important;
+}
+
+/* Botón secundario en modo Alto Contraste: fondo negro, texto blanco, borde blanco; hover #262626 */
+[data-theme="contrast"] .btn-secondary,
+[data-theme="contrast"] button.btn-secondary,
+html.contrast-mode .btn-secondary,
+html.contrast-mode button.btn-secondary {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="contrast"] .btn-secondary:hover,
+[data-theme="contrast"] button.btn-secondary:hover,
+html.contrast-mode .btn-secondary:hover,
+html.contrast-mode button.btn-secondary:hover {
+  background-color: #262626 !important;
+  border-color: #FFFFFF !important;
+}
+
+/* Enlaces en Alto Contraste: cian #66D9FF subrayados con offset 3px */
+[data-theme="contrast"] a,
+html.contrast-mode a,
+[data-theme="contrast"] .link-accessible,
+html.contrast-mode .link-accessible {
+  color: #66D9FF !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+}
+
+/* Eliminación de gradientes, transparencias y sombras en modo Alto Contraste */
+[data-theme="contrast"] *,
+html.contrast-mode * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Compatibilidad con modo de contraste del sistema operativo (forced-colors: active) */
+@media (forced-colors: active) {
+  * {
+    forced-color-adjust: auto;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    border: 1px solid ButtonText;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}
+
+/* Configuración de Material Symbols */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;

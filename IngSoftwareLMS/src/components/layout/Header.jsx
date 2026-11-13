@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTheme } from '../../contexts/ThemeContext'
+import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext'
 
 export function Header({
   displayName,
@@ -12,15 +14,24 @@ export function Header({
   onNavigate,
   onLogout,
 }) {
+  const { theme, isDark, isContrast, toggleTheme } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
+
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false)
   const [notifFilter, setNotifFilter] = useState('all') // 'all' | 'unread' | 'academic' | 'deadline'
+
   const profileRef = useRef(null)
   const notifRef = useRef(null)
+  const langRef = useRef(null)
 
   const unreadCount = notifications.filter((n) => n.unread).length
 
-  // Filtrado de notificaciones (Recomendación 9)
+  // Contador de notificaciones con formato 0, 1-9 y +9
+  const formattedUnread = unreadCount > 9 ? '9+' : unreadCount > 0 ? String(unreadCount) : null
+
+  // Filtrado de notificaciones por categoría
   const filteredNotifications = notifications.filter((n) => {
     if (notifFilter === 'unread') return n.unread
     if (notifFilter === 'academic') return n.type === 'academic' || n.type === 'material'
@@ -32,14 +43,34 @@ export function Header({
     switch (type) {
       case 'academic':
       case 'material':
-        return { icon: 'assignment', bg: 'bg-[#F0F9FF]', text: 'text-[#075477]', border: 'border-[#BAE6FD]' }
+        return {
+          icon: 'assignment',
+          bg: 'bg-[#EFF8FB] dark:bg-[#102F46] [data-theme=contrast]_&:bg-[#0D0D0D]',
+          text: 'text-[#0B5575] dark:text-[#7DD3FC] [data-theme=contrast]_&:text-[#66D9FF]',
+          border: 'border-[#BAE6FD] dark:border-[#155E75] [data-theme=contrast]_&:border-[#66D9FF]',
+        }
       case 'deadline':
-        return { icon: 'warning', bg: 'bg-[#FEF2F2]', text: 'text-[#C53030]', border: 'border-[#FECACA]' }
+        return {
+          icon: 'warning',
+          bg: 'bg-[#FEF3F2] dark:bg-[#46191D] [data-theme=contrast]_&:bg-[#0D0D0D]',
+          text: 'text-[#B42318] dark:text-[#FCA5A5] [data-theme=contrast]_&:text-[#FF5A67]',
+          border: 'border-[#FECDCA] dark:border-[#7F1D1D] [data-theme=contrast]_&:border-[#FF5A67]',
+        }
       case 'forum':
-        return { icon: 'forum', bg: 'bg-[#F0FDFA]', text: 'text-[#0D9488]', border: 'border-[#99F6E4]' }
+        return {
+          icon: 'forum',
+          bg: 'bg-[#ECFDF3] dark:bg-[#123B30] [data-theme=contrast]_&:bg-[#0D0D0D]',
+          text: 'text-[#067647] dark:text-[#6EE7B7] [data-theme=contrast]_&:text-[#00F084]',
+          border: 'border-[#A6F4C5] dark:border-[#0F766E] [data-theme=contrast]_&:border-[#00F084]',
+        }
       case 'system':
       default:
-        return { icon: 'verified', bg: 'bg-[#F8FAFC]', text: 'text-[#475569]', border: 'border-[#E2E8F0]' }
+        return {
+          icon: 'verified',
+          bg: 'bg-[#F8FAFC] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D]',
+          text: 'text-[#475569] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-white',
+          border: 'border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6]',
+        }
     }
   }
 
@@ -51,20 +82,23 @@ export function Header({
       if (notifRef.current && !notifRef.current.contains(e.target)) {
         setNotificationsOpen(false)
       }
+      if (langRef.current && !langRef.current.contains(e.target)) {
+        setLangDropdownOpen(false)
+      }
     }
     window.addEventListener('mousedown', handleClickOutside)
     return () => window.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-[#E2E8F0] bg-white px-4 lg:px-8">
-      {/* Izquierda: Menú móvil + Logo */}
+    <header className="fixed inset-x-0 top-0 z-50 flex h-16 min-h-[64px] items-center justify-between border-b border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-[#0D0D0D] px-4 lg:px-6 transition-colors duration-200">
+      {/* 1. Izquierda: Menú móvil + Logo Campus Virtual + Badge Semestre Contextual */}
       <div className="flex items-center gap-3">
         <button
           aria-controls="sidebar-nav"
           aria-expanded={menuOpen}
-          aria-label={menuOpen ? 'Cerrar navegación' : 'Abrir navegación'}
-          className="rounded-lg p-2 text-[#1F2937] hover:bg-[#F1F5F9] focus-visible:ring-2 focus-visible:ring-[#0B4F6C] lg:hidden"
+          aria-label={menuOpen ? t('header.close_nav') : t('header.open_nav')}
+          className="rounded-lg p-2 text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white hover:bg-[#F1F5F9] dark:hover:bg-[#16243A] [data-theme=contrast]_&:hover:bg-[#262626] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400] lg:hidden"
           onClick={() => setMenuOpen((open) => !open)}
           type="button"
         >
@@ -74,65 +108,141 @@ export function Header({
         </button>
 
         <button
-          className="flex items-center gap-2.5 text-left focus:outline-none"
+          className="flex items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400] rounded-xl"
           onClick={() => onNavigate?.('overview')}
           type="button"
         >
-          <span className="grid size-9 place-items-center rounded-xl bg-[#0B4F6C] font-black text-sm text-white shadow-xs">
+          <span className="grid size-9 place-items-center rounded-xl bg-[#0B5575] dark:bg-[#0E7490] [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black font-black text-sm text-white shadow-xs">
             LMS
           </span>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-extrabold tracking-tight text-[#0B4F6C]">
+            <span className="text-sm font-extrabold tracking-tight text-[#0B5575] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">
               Campus Virtual
             </span>
-            <span className="text-[11px] font-semibold text-[#64748B]">
-              Ambiente de Aprendizaje
+            <span className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+              {t('app_tagline')}
             </span>
           </div>
         </button>
 
-        {/* Indicador discreto del semestre activo */}
-        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-1 text-xs font-semibold text-[#4B5563]">
-          <span className="size-2 rounded-full bg-[#16856A]" />
-          Semestre Otoño 2026
+        {/* Badge Semestre Contextual: Neutro/Azul suave, h: 28px, rounded-full */}
+        <span className="hidden sm:inline-flex items-center gap-1.5 h-7 rounded-full border border-[#BAE6FD] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#EFF8FB] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] px-3 text-xs font-semibold text-[#0B5575] dark:text-[#BAE6FD] [data-theme=contrast]_&:text-[#66D9FF]">
+          <span className="size-2 rounded-full bg-[#067647] dark:bg-[#2DD4BF] [data-theme=contrast]_&:bg-[#00F084]" />
+          {t('header.semester')}
         </span>
       </div>
 
-      {/* Derecha: Notificaciones y Perfil */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Campana de Notificaciones */}
+      {/* 2. Derecha: [Selector Idioma] [Toggle Modo Oscuro / Contraste] [Campana Notificaciones] [Perfil Usuario] */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5">
+        {/* Selector de Idioma (i18n) */}
+        <div className="relative" ref={langRef}>
+          <button
+            aria-expanded={langDropdownOpen}
+            aria-label={t('header.language')}
+            className="flex items-center gap-1.5 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] px-2.5 text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white hover:bg-[#F8FAFC] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400] transition"
+            onClick={() => setLangDropdownOpen((prev) => !prev)}
+            type="button"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-base text-[#0B5575] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF]">
+              language
+            </span>
+            <span className="uppercase text-[11px] font-extrabold tracking-wide">
+              {language}
+            </span>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+              expand_more
+            </span>
+          </button>
+
+          {langDropdownOpen && (
+            <div className="absolute right-0 top-11 z-50 w-44 rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#1D2F46] [data-theme=contrast]_&:bg-[#0D0D0D] p-1.5 shadow-xl animate-in fade-in duration-100">
+              <span className="block px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+                {t('header.language')}
+              </span>
+              <div className="space-y-0.5">
+                {LANGUAGES.map((item) => (
+                  <button
+                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                      language === item.code
+                        ? 'bg-[#EFF8FB] text-[#0B5575] dark:bg-[#123B49] dark:text-[#67E8F9] [data-theme=contrast]_&:bg-[#1A1A1A] [data-theme=contrast]_&:text-[#66D9FF] font-bold'
+                        : 'text-[#0F172A] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-white hover:bg-[#F8FAFC] dark:hover:bg-[#16243A] [data-theme=contrast]_&:hover:bg-[#262626]'
+                    }`}
+                    key={item.code}
+                    onClick={() => {
+                      setLanguage(item.code)
+                      setLangDropdownOpen(false)
+                    }}
+                    type="button"
+                  >
+                    <span>{item.native}</span>
+                    <span className="text-[10px] font-mono text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+                      {item.short}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Toggle Modo Oscuro / Alto Contraste: Ciclo Claro -> Oscuro -> Alto Contraste -> Claro */}
+        <button
+          aria-label={
+            theme === 'light'
+              ? t('header.dark_mode')
+              : theme === 'dark'
+              ? t('header.contrast_mode')
+              : t('header.light_mode')
+          }
+          className="grid size-9 place-items-center rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] text-[#475569] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white hover:bg-[#F8FAFC] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400] transition"
+          onClick={toggleTheme}
+          title={
+            theme === 'light'
+              ? t('header.dark_mode')
+              : theme === 'dark'
+              ? t('header.contrast_mode')
+              : t('header.light_mode')
+          }
+          type="button"
+        >
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">
+            {theme === 'light' ? 'dark_mode' : theme === 'dark' ? 'contrast' : 'light_mode'}
+          </span>
+        </button>
+
+        {/* Campana de Notificaciones con Badge 0, 1-9, +9 */}
         <div className="relative" ref={notifRef}>
           <button
             aria-expanded={notificationsOpen}
-            aria-label={`Notificaciones del sistema (${unreadCount} pendientes)`}
-            className="relative grid size-9.5 place-items-center rounded-xl border border-[#E2E8F0] bg-white text-[#4B5563] hover:bg-[#F8FAFC] hover:text-[#1F2937] focus-visible:ring-2 focus-visible:ring-[#0B4F6C]"
+            aria-label={t('header.notifications_aria', { count: unreadCount })}
+            className="relative grid size-9 place-items-center rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] text-[#475569] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white hover:bg-[#F8FAFC] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400] transition"
             onClick={() => setNotificationsOpen((prev) => !prev)}
             type="button"
           >
-            <span aria-hidden="true" className="material-symbols-outlined text-xl">
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">
               notifications
             </span>
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 grid size-4.5 place-items-center rounded-full bg-[#C53030] text-[10px] font-bold text-white shadow-xs">
-                {unreadCount}
+            {formattedUnread && (
+              <span className="absolute -top-1 -right-1 grid min-w-4.5 h-4.5 px-1 place-items-center rounded-full bg-[#B42318] text-white dark:bg-[#7F1D1D] dark:text-[#FECACA] [data-theme=contrast]_&:bg-[#FF5A67] [data-theme=contrast]_&:text-black text-[10px] font-extrabold shadow-xs">
+                {formattedUnread}
               </span>
             )}
           </button>
 
-          {/* Menú Desplegable de Notificaciones Rediseñado (Recomendación 9) */}
+          {/* Menú Desplegable de Notificaciones */}
           {notificationsOpen && (
-            <div className="absolute right-0 top-11 z-50 w-84 sm:w-96 rounded-[14px] border border-[#dbe3ec] bg-white p-3.5 shadow-xl animate-in fade-in duration-100">
-              <div className="mb-2.5 flex items-center justify-between border-b border-[#dbe3ec] pb-2.5 px-1">
-                <span className="font-extrabold text-[#172033] text-xs">
-                  Notificaciones ({unreadCount} sin leer)
+            <div className="absolute right-0 top-11 z-50 w-84 sm:w-96 rounded-2xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#1D2F46] [data-theme=contrast]_&:bg-[#0D0D0D] p-3.5 shadow-2xl animate-in fade-in duration-100">
+              <div className="mb-2.5 flex items-center justify-between border-b border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] pb-2.5 px-1">
+                <span className="font-extrabold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white text-xs">
+                  {t('header.notifications')} ({unreadCount})
                 </span>
                 {unreadCount > 0 && (
                   <button
-                    className="text-[11px] font-bold text-[#075477] hover:underline"
+                    className="text-[11px] font-bold text-[#0B5575] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] hover:underline"
                     onClick={onMarkNotificationsRead}
                     type="button"
                   >
-                    Marcar todas como leídas
+                    {t('header.mark_all_read')}
                   </button>
                 )}
               </div>
@@ -140,16 +250,16 @@ export function Header({
               {/* Filtros de Categoría */}
               <div className="flex items-center gap-1 mb-2.5 overflow-x-auto pb-1">
                 {[
-                  { id: 'all', label: 'Todas' },
-                  { id: 'unread', label: 'No leídas' },
-                  { id: 'academic', label: 'Académicas' },
-                  { id: 'deadline', label: 'Fechas límite' },
+                  { id: 'all', label: t('header.all') },
+                  { id: 'unread', label: t('header.unread') },
+                  { id: 'academic', label: t('header.academic') },
+                  { id: 'deadline', label: t('header.deadlines') },
                 ].map((f) => (
                   <button
                     className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition shrink-0 ${
                       notifFilter === f.id
-                        ? 'bg-[#075477] text-white shadow-xs'
-                        : 'bg-[#f8fafc] text-[#64748b] border border-[#dbe3ec] hover:bg-[#f1f5f9]'
+                        ? 'bg-[#0B5575] text-white dark:bg-[#0E7490] [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black shadow-xs'
+                        : 'bg-[#F8FAFC] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] text-[#475569] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-white border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] hover:bg-[#F1F5F9] dark:hover:bg-[#1D2F46]'
                     }`}
                     key={f.id}
                     onClick={() => setNotifFilter(f.id)}
@@ -160,7 +270,7 @@ export function Header({
                 ))}
               </div>
 
-              {/* Lista con scroll y espacio holgado */}
+              {/* Lista de Notificaciones */}
               <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
                 {filteredNotifications.length > 0 ? (
                   filteredNotifications.map((n) => {
@@ -168,14 +278,13 @@ export function Header({
 
                     return (
                       <div
-                        className={`flex items-start gap-2.5 rounded-[10px] border p-2.5 text-xs transition ${
+                        className={`flex items-start gap-2.5 rounded-xl border p-2.5 text-xs transition ${
                           n.unread
-                            ? 'bg-[#F0F9FF]/60 border-[#BAE6FD]'
-                            : 'bg-white border-[#dbe3ec] hover:bg-[#f8fafc]'
+                            ? 'bg-[#EFF8FB] dark:bg-[#123B49] [data-theme=contrast]_&:bg-[#1A1A1A] border-[#BAE6FD] dark:border-[#0E7490] [data-theme=contrast]_&:border-[#66D9FF]'
+                            : 'bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-[#0D0D0D] border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] hover:bg-[#F8FAFC] dark:hover:bg-[#16243A]'
                         }`}
                         key={n.id}
                       >
-                        {/* Icono suave por categoría */}
                         <span
                           className={`grid size-7.5 place-items-center rounded-full shrink-0 border ${catStyle.bg} ${catStyle.text} ${catStyle.border}`}
                         >
@@ -185,18 +294,21 @@ export function Header({
                         </span>
 
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-[#172033] leading-snug line-clamp-1">{n.title}</p>
-                          <p className="text-[#64748b] text-[11px] mt-0.5 leading-relaxed line-clamp-2">
+                          <p className="font-bold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white leading-snug line-clamp-1">
+                            {n.title}
+                          </p>
+                          <p className="text-[#475569] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-[#F2F2F2] text-[11px] mt-0.5 leading-relaxed line-clamp-2">
                             {n.description}
                           </p>
-                          <span className="mt-1 block text-[10px] text-[#94a3b8] font-medium">{n.time}</span>
+                          <span className="mt-1 block text-[10px] text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9] font-medium">
+                            {n.time}
+                          </span>
                         </div>
 
-                        {/* Botón individual de marcar como leída */}
                         {n.unread && (
                           <button
                             aria-label="Marcar notificación como leída"
-                            className="grid size-6 place-items-center rounded-full text-[#075477] hover:bg-[#E8F3F8] shrink-0"
+                            className="grid size-6 place-items-center rounded-full text-[#0B5575] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] hover:bg-white dark:hover:bg-[#16243A] shrink-0"
                             onClick={() => onMarkNotificationsRead?.(n.id)}
                             title="Marcar como leída"
                             type="button"
@@ -208,8 +320,8 @@ export function Header({
                     )
                   })
                 ) : (
-                  <p className="py-6 text-center text-xs text-[#64748b]">
-                    No tienes notificaciones en esta categoría.
+                  <p className="py-6 text-center text-xs text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+                    {t('header.no_notifications')}
                   </p>
                 )}
               </div>
@@ -217,59 +329,65 @@ export function Header({
           )}
         </div>
 
-        {/* Menú de Perfil */}
+        {/* Perfil de Usuario con Menú Desplegable (width: 280px) */}
         <div className="relative" ref={profileRef}>
           <button
             aria-expanded={profileDropdownOpen}
             aria-label="Menú de cuenta de usuario"
-            className="flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-2.5 py-1.5 transition hover:bg-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-[#0B4F6C]"
+            className="flex items-center gap-2 rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] px-2.5 py-1.5 transition hover:bg-[#F8FAFC] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400]"
             onClick={() => setProfileDropdownOpen((prev) => !prev)}
             type="button"
           >
-            <span className="grid size-7.5 place-items-center rounded-lg bg-[#0B4F6C] font-bold text-xs text-white">
+            {/* Avatar 36px en Topbar */}
+            <span className="grid size-9 place-items-center rounded-lg bg-[#0B5575] dark:bg-[#0E7490] [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black font-bold text-xs text-white">
               {displayName.charAt(0).toUpperCase()}
             </span>
             <div className="hidden flex-col items-start leading-tight sm:flex">
-              <span className="max-w-28 truncate text-xs font-bold text-[#1F2937]">
+              <span className="max-w-28 truncate text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">
                 {displayName}
               </span>
-              <span className="text-[10px] font-semibold text-[#0B4F6C]">
+              <span className="text-[10px] font-semibold text-[#0B5575] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
                 {activeRole}
               </span>
             </div>
-            <span aria-hidden="true" className="material-symbols-outlined text-base text-[#64748B]">
+            <span aria-hidden="true" className="material-symbols-outlined text-base text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
               expand_more
             </span>
           </button>
 
+          {/* Menú Desplegable con ancho estricto de 280px */}
           {profileDropdownOpen && (
-            <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-[#E2E8F0] bg-white p-2.5 shadow-xl animate-in fade-in duration-100">
-              <div className="flex items-center gap-2.5 border-b border-[#E2E8F0] pb-2.5 px-1">
-                <span className="grid size-9 place-items-center rounded-lg bg-[#0B4F6C] font-bold text-xs text-white">
+            <div className="absolute right-0 top-11 z-50 w-[280px] rounded-2xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#1D2F46] [data-theme=contrast]_&:bg-[#0D0D0D] p-3 shadow-2xl animate-in fade-in duration-100">
+              {/* Cabecera con Avatar de 44px y Nombre en 14px bold */}
+              <div className="flex items-center gap-3 border-b border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] pb-3">
+                <span className="grid size-11 place-items-center rounded-xl bg-[#0B5575] dark:bg-[#0E7490] [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black font-extrabold text-sm text-white">
                   {displayName.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-[#1F2937]">{displayName}</p>
-                  <span className="inline-flex items-center gap-1 text-[10px] text-[#16856A] font-bold">
-                    <span className="material-symbols-outlined text-xs">verified</span>
-                    Cuenta Verificada
+                  <p className="truncate text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">
+                    {displayName}
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[11px] text-[#067647] dark:text-[#6EE7B7] [data-theme=contrast]_&:text-[#00F084] font-bold">
+                    <span className="material-symbols-outlined text-sm">verified</span>
+                    {t('header.verified_account')}
                   </span>
                 </div>
               </div>
 
-              {/* Selector de Rol Seguro (Solo administradores pueden alternar; solo lectura para estudiante y docente) */}
-              <div className="my-2 rounded-xl bg-[#F8FAFC] p-2">
-                <span className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">
-                  Rol activo
+              {/* Bloque Independiente: ROL ACTIVO con Check Visual */}
+              <div className="my-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#F8FAFC] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#1A1A1A] p-2.5">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9] mb-1.5">
+                  {t('header.active_role')}: {activeRole}
                 </span>
+
                 {userRole === 'Administrador' ? (
                   <div className="grid grid-cols-3 gap-1">
                     {['Estudiante', 'Docente', 'Administrador'].map((r) => (
                       <button
                         className={`rounded-lg py-1 px-1 text-[11px] font-bold transition truncate text-center ${
                           activeRole === r
-                            ? 'bg-[#0B4F6C] text-white shadow-xs'
-                            : 'bg-white text-[#4B5563] border border-[#E2E8F0] hover:bg-[#F1F5F9]'
+                            ? 'bg-[#0B5575] text-white dark:bg-[#0E7490] [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black shadow-xs'
+                            : 'bg-white dark:bg-[#1D2F46] [data-theme=contrast]_&:bg-[#0D0D0D] text-[#475569] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-white border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] hover:bg-[#F1F5F9] dark:hover:bg-[#16243A]'
                         }`}
                         key={r}
                         onClick={() => setActiveRole(r)}
@@ -281,35 +399,46 @@ export function Header({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#1F2937]">
-                    <span className="flex items-center gap-1.5">
-                      <span className="size-2 rounded-full bg-[#16856A]" />
+                  <div className="flex items-center justify-between rounded-lg border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#1D2F46] [data-theme=contrast]_&:bg-[#0D0D0D] px-2.5 py-1.5 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white">
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className="material-symbols-outlined text-[#067647] dark:text-[#6EE7B7] [data-theme=contrast]_&:text-[#00F084] text-base">
+                        check_circle
+                      </span>
                       {activeRole}
                     </span>
-                    <span className="text-[10px] text-[#64748B]">Verificado en sesión</span>
+                    <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+                      {t('header.verified_session')}
+                    </span>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-0.5 border-t border-[#E2E8F0] pt-1.5 text-xs">
+              {/* Acciones: Ajustes de cuenta y Cerrar sesión */}
+              <div className="space-y-0.5 border-t border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] pt-2 text-xs">
                 <button
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 font-medium text-[#1F2937] hover:bg-[#F8FAFC]"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 font-medium text-[#0F172A] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-white hover:bg-[#F8FAFC] dark:hover:bg-[#16243A] [data-theme=contrast]_&:hover:bg-[#262626] transition"
                   onClick={() => {
                     onNavigate?.('settings')
                     setProfileDropdownOpen(false)
                   }}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-base text-[#64748B]">settings</span>
-                  Ajustes de cuenta
+                  <span className="material-symbols-outlined text-base text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+                    settings
+                  </span>
+                  <span>{t('header.account_settings')}</span>
                 </button>
+
+                {/* Botón de acción destructiva */}
                 <button
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 font-bold text-[#C53030] hover:bg-[#FEF2F2]"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 font-bold text-[#B42318] dark:text-[#FCA5A5] [data-theme=contrast]_&:text-[#FF5A67] hover:bg-[#FEF3F2] dark:hover:bg-[#46191D] transition"
                   onClick={onLogout}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-base">logout</span>
-                  Cerrar sesión
+                  <span className="material-symbols-outlined text-base">
+                    logout
+                  </span>
+                  <span>{t('header.logout')}</span>
                 </button>
               </div>
             </div>
@@ -319,3 +448,5 @@ export function Header({
     </header>
   )
 }
+
+export default Header

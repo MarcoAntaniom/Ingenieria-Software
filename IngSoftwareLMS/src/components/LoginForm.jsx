@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '../contexts/auth-context'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const loginSchema = z.object({
   email: z
@@ -21,6 +22,7 @@ const loginSchema = z.object({
 })
 
 export function LoginForm() {
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
@@ -129,10 +131,10 @@ export function LoginForm() {
       {/* Directriz 3.1: Cabecera del Formulario */}
       <div className="mb-5">
         <h1 className="text-2xl sm:text-[26px] font-bold tracking-tight text-[#1F2937]">
-          Iniciar sesión
+          {t('login.page_title')}
         </h1>
         <p className="mt-1 text-xs sm:text-sm text-[#475569] leading-relaxed">
-          Accede con tu cuenta institucional para continuar con tus clases y actividades.
+          {t('login.page_subtitle')}
         </p>
       </div>
 
@@ -168,7 +170,7 @@ export function LoginForm() {
             className="mb-1.5 block text-xs sm:text-sm font-semibold text-[#1F2937]"
             htmlFor="email"
           >
-            Correo institucional <span className="text-[#EF4444]">*</span>
+            {t('login.email_label')} <span className="text-[#EF4444]">*</span>
           </label>
           <div className="relative flex items-center">
             <span
@@ -211,7 +213,7 @@ export function LoginForm() {
               className="text-xs sm:text-sm font-semibold text-[#1F2937]"
               htmlFor="password"
             >
-              Contraseña <span className="text-[#EF4444]">*</span>
+              {t('login.password_label')} <span className="text-[#EF4444]">*</span>
             </label>
           </div>
           <div className="relative flex items-center">
@@ -268,7 +270,7 @@ export function LoginForm() {
               onClick={() => setShowResetHelp((prev) => !prev)}
               type="button"
             >
-              ¿Olvidaste tu contraseña?
+              {t('login.forgot_password')}
             </button>
           </div>
         </div>
@@ -286,10 +288,10 @@ export function LoginForm() {
                   aria-hidden="true"
                   className="size-4 sm:size-5 animate-spin rounded-full border-2 border-white/30 border-t-white shrink-0"
                 />
-                <span>Ingresando...</span>
+                <span>{t('login.submitting')}</span>
               </>
             ) : (
-              <span>Ingresar a mis clases</span>
+              <span>{t('login.submit_btn')}</span>
             )}
           </button>
         </div>
@@ -353,7 +355,7 @@ export function LoginForm() {
             <span aria-hidden="true" className="material-symbols-outlined text-xs group-open:rotate-180 transition-transform">
               tune
             </span>
-            <span>Cuentas de demostración (evaluación rápida)</span>
+            <span>{t('login.quick_access_title')}</span>
           </summary>
           <div className="mt-2 flex flex-wrap justify-center gap-1.5">
             <button

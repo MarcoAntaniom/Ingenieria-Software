@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import LoginForm from './components/LoginForm'
 import { useAuth } from './contexts/auth-context'
+import { useLanguage, LANGUAGES } from './contexts/LanguageContext'
 
 // Lazy loading de ruta del panel principal para optimizar rendimiento de carga inicial
 const Dashboard = lazy(() => import('./components/Dashboard'))
@@ -38,9 +39,31 @@ function ProtectedRoute({ children }) {
 }
 
 function LoginPage() {
+  const { t, language, setLanguage } = useLanguage()
+
   return (
     <main className="login-page min-h-screen w-full bg-[#F4F7FA] grid place-items-center p-4 sm:p-6 lg:p-8 font-sans text-[#1F2937] antialiased">
       <div className="w-full flex flex-col items-center max-w-[820px]">
+        {/* Selector de idioma superior en Login */}
+        <div className="w-full flex justify-end mb-3">
+          <div className="inline-flex rounded-xl bg-white border border-[#CBD5E1] p-1 shadow-xs gap-1" role="group" aria-label={t('header.language')}>
+            {LANGUAGES.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLanguage(l.code)}
+                type="button"
+                className={`px-2.5 py-1 text-xs rounded-lg font-bold transition ${
+                  language === l.code
+                    ? 'bg-[#0B4F6C] text-white shadow-xs'
+                    : 'text-[#64748B] hover:text-[#0B4F6C] hover:bg-[#F8FAFC]'
+                }`}
+              >
+                {l.native}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Tarjeta Principal de Login */}
         <section
           aria-label="Inicio de sesión institucional"
@@ -71,10 +94,10 @@ function LoginPage() {
 
               {/* Título Principal y Subtítulo */}
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-snug">
-                Aprende desde cualquier lugar
+                {t('login.benefits_title')}
               </h2>
               <p className="mt-2 text-xs sm:text-[13px] text-[#E0F2FE] leading-relaxed">
-                Accede a tus clases, actividades y recursos académicos desde un solo lugar.
+                {t('login.benefits_subtitle')}
               </p>
 
               {/* Lista breve de beneficios visuales no interactivos con checkmarks */}
@@ -86,7 +109,7 @@ function LoginPage() {
                   >
                     check_circle
                   </span>
-                  <span>Clases y recursos académicos</span>
+                  <span>{t('login.benefit_1')}</span>
                 </li>
                 <li className="flex items-center gap-2.5 text-xs sm:text-[13px] font-medium text-white">
                   <span
@@ -95,7 +118,7 @@ function LoginPage() {
                   >
                     check_circle
                   </span>
-                  <span>Seguimiento de actividades</span>
+                  <span>{t('login.benefit_2')}</span>
                 </li>
               </ul>
             </div>
@@ -105,7 +128,7 @@ function LoginPage() {
               <span aria-hidden="true" className="material-symbols-outlined text-sm">
                 verified_user
               </span>
-              <span>Plataforma Oficial Segura · 2026</span>
+              <span>{t('login.secure_platform')}</span>
             </div>
           </aside>
 
@@ -117,7 +140,7 @@ function LoginPage() {
 
         {/* Pie Contextual Discreto y Copyright */}
         <footer className="mt-4 text-center text-xs text-[#64748B]">
-          © 2026 Campus Virtual LMS · Universidad. Todos los derechos reservados.
+          {t('login.copyright')}
         </footer>
       </div>
     </main>

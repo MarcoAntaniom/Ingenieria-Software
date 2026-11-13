@@ -24,22 +24,24 @@ import { QuickResolutionModal } from './QuickResolutionModal'
 import { DidacticMaterialModal } from './DidacticMaterialModal'
 import { InteractionModal } from './InteractionModal'
 import { SyllabusModal } from './SyllabusModal'
+import { ClassroomModal } from './ClassroomModal'
+import { useLanguage } from '../contexts/LanguageContext'
 import { SkeletonCard } from './feedback/SkeletonCard'
 import { EmptyState } from './feedback/EmptyState'
 import { Drawer } from './ui/Drawer'
 
 const TABS = [
-  { id: 'all', label: 'Todas' },
-  { id: 'progress', label: 'En curso' },
-  { id: 'pending', label: 'Con pendientes' },
-  { id: 'completed', label: 'Completadas' },
+  { id: 'all', label: 'Todas', i18nKey: 'dashboard.tabs.all' },
+  { id: 'progress', label: 'En curso', i18nKey: 'dashboard.tabs.progress' },
+  { id: 'pending', label: 'Con pendientes', i18nKey: 'dashboard.tabs.pending' },
+  { id: 'completed', label: 'Completadas', i18nKey: 'dashboard.tabs.completed' },
 ]
 
 const SORT_OPTIONS = [
-  { id: 'recent', label: 'Más recientes' },
-  { id: 'urgency', label: 'Próxima entrega' },
-  { id: 'progress', label: 'Mayor progreso' },
-  { id: 'name', label: 'Nombre de la asignatura' },
+  { id: 'recent', label: 'Más recientes', i18nKey: 'dashboard.sort_recent' },
+  { id: 'urgency', label: 'Próxima entrega', i18nKey: 'dashboard.sort_urgency' },
+  { id: 'progress', label: 'Mayor progreso', i18nKey: 'dashboard.sort_progress' },
+  { id: 'name', label: 'Nombre de la asignatura', i18nKey: 'dashboard.sort_name' },
 ]
 
 const ROLE_ALLOWED_VIEWS = {
@@ -113,6 +115,7 @@ function matchesTab(course, tab) {
 export function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { user, signOut } = useAuth()
+  const { t, language } = useLanguage()
   const navigate = useNavigate()
 
   // Sincronización de filtros y búsqueda con URL Search Params
@@ -393,7 +396,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] font-sans text-xs sm:text-sm text-[#1F2937] antialiased">
+    <div className="min-h-screen bg-[#F6F8FB] dark:bg-[#0B1220] [data-theme=contrast]_&:bg-black font-sans text-xs sm:text-sm text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white antialiased transition-colors duration-200">
       {/* Encabezado Superior Global con RBAC */}
       <Header
         activeRole={activeRole}
@@ -425,7 +428,7 @@ export function Dashboard() {
       {/* Contenido Principal */}
       <main
         className={`min-h-screen pt-16 transition-all duration-200 ${
-          isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+          isSidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[240px]'
         }`}
       >
         <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -478,62 +481,76 @@ export function Dashboard() {
               {/* Vista Principal: Panel de Clases */}
               {activeView === 'overview' && (
                 <div className="space-y-6">
-                  {/* 1. Encabezado y Resumen del Estudiante (Un único título principal) */}
-                  <div className="flex flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-5 sm:p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+                  {/* 1. Encabezado y Resumen del Estudiante (Un único título principal, métricas jerarquizadas) */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-white bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-[#0D0D0D] p-5 sm:p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h1 className="text-2xl sm:text-[26px] font-extrabold tracking-tight text-[#1F2937]">
-                        Panel Central de Clases
+                      <h1 className="text-2xl sm:text-[26px] font-extrabold tracking-tight text-[#0F172A] dark:text-white">
+                        {t('dashboard.title')}
                       </h1>
-                      {/* Resumen útil que ofrece contexto inmediato */}
-                      <p className="mt-1 text-xs sm:text-sm text-[#4B5563]">
-                        Tienes <strong className="text-[#0B4F6C]">{activeCount} clases activas</strong> y{' '}
-                        <strong className="text-[#C53030]">{pendingCount} actividades pendientes</strong>.
+                      {/* Resumen métrico jerarquizado */}
+                      <p className="mt-1 text-xs sm:text-sm text-[#475569] dark:text-[#94A3B8]">
+                        {language === 'es' ? (
+                          <>
+                            Tienes <strong className="font-bold text-[#0F172A] dark:text-white">{activeCount} clases activas</strong> y{' '}
+                            <strong className="font-bold text-[#B54708] dark:text-[#FCA5A5]">{pendingCount} actividades pendientes</strong>.
+                          </>
+                        ) : language === 'arn' ? (
+                          <>
+                            Nieymi <strong className="font-bold text-[#0F172A] dark:text-white">{activeCount} chillkatuwe petu tremkülelu</strong> ka{' '}
+                            <strong className="font-bold text-[#B54708] dark:text-[#FCA5A5]">{pendingCount} pepikawal küdaw</strong>.
+                          </>
+                        ) : (
+                          <>
+                            You have <strong className="font-bold text-[#0F172A] dark:text-white">{activeCount} active classes</strong> and{' '}
+                            <strong className="font-bold text-[#B54708] dark:text-[#FCA5A5]">{pendingCount} pending activities</strong>.
+                          </>
+                        )}
                       </p>
                     </div>
 
-                    {/* Acción 'Revisar pendientes' */}
+                    {/* Acción 'Revisar pendientes' (altura 40-44px con badge numérico integrado) */}
                     {pendingCount > 0 && (
                       <button
-                        className="inline-flex items-center gap-2 self-start sm:self-center rounded-xl bg-[#0B4F6C] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#083C53] transition active:scale-95"
+                        className="btn-primary inline-flex items-center gap-2 self-start sm:self-center rounded-xl bg-[#0B5575] hover:bg-[#074968] dark:bg-[#0E7490] dark:hover:bg-[#155E75] h-11 min-h-[44px] px-4 text-xs font-bold text-white shadow-xs transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] dark:focus-visible:ring-[#67E8F9] [data-theme=contrast]_&:focus-visible:ring-[#FFD400]"
                         onClick={() => setQuickResolutionOpen(true)}
                         type="button"
                       >
                         <span aria-hidden="true" className="material-symbols-outlined text-base">
                           assignment_late
                         </span>
-                        <span>Revisar pendientes</span>
-                        <span className="grid size-5 place-items-center rounded-full bg-[#C53030] text-[10px] font-bold text-white">
+                        <span>{t('dashboard.review_pending')}</span>
+                        <span className="grid size-5 place-items-center rounded-full bg-[#B42318] text-[10px] font-bold text-white shadow-xs">
                           {pendingCount}
                         </span>
                       </button>
                     )}
                   </div>
 
-                  {/* 2. Herramientas de Consulta: Filtros y Búsqueda */}
-                  <div className="flex flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-3 sm:p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
-                    {/* Pestañas de Segmentación en Escritorio */}
+                  {/* 2. Herramientas de Consulta: Chips a la izq, Búsqueda al centro, Orden a la der */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-white bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-[#0D0D0D] p-3 sm:p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
+                    {/* Chips de filtro (min-height: 36px) con aria-pressed */}
                     <div aria-label="Filtrar por estado" className="hidden lg:flex items-center gap-1.5 overflow-x-auto" role="tablist">
                       {TABS.map((item) => {
                         const count = courses.filter((c) => matchesTab(c, item.id)).length
                         const isSelected = activeTab === item.id
+                        const label = item.i18nKey ? t(item.i18nKey) : item.label
 
                         return (
                           <button
-                            aria-selected={isSelected}
-                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#075477] ${
+                            aria-pressed={isSelected}
+                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl h-9 min-h-[36px] px-3.5 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B5575] ${
                               isSelected
-                                ? 'bg-[#075477] text-white shadow-xs'
-                                : 'text-[#4B5563] hover:bg-[#F1F5F9] hover:text-[#1F2937]'
+                                ? 'bg-[#0B5575] text-white dark:bg-[#0E7490] [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black shadow-xs'
+                                : 'bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] text-[#475569] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-white border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] hover:bg-[#F8FAFC] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626]'
                             }`}
                             key={item.id}
                             onClick={() => handleTabChange(item.id)}
-                            role="tab"
                             type="button"
                           >
-                            <span>{item.label}</span>
+                            <span>{label}</span>
                             <span
                               className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                                isSelected ? 'bg-white/25 text-white' : 'bg-[#E2E8F0] text-[#1F2937]'
+                                isSelected ? 'bg-white/25 text-white' : 'bg-[#E2E8F0] dark:bg-[#334155] text-[#0F172A] dark:text-white'
                               }`}
                             >
                               {count}
@@ -543,28 +560,28 @@ export function Dashboard() {
                       })}
                     </div>
 
-                    {/* Búsqueda, Botón Filtros Móvil y Ordenamiento */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 lg:min-w-[440px]">
-                      {/* Búsqueda contextual */}
-                      <div className="relative flex-1">
+                    {/* Búsqueda flexible al centro (min 40px, max 280px) y Ordenamiento fijo a la der */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                      {/* Búsqueda contextual flexible */}
+                      <div className="relative w-full sm:w-[260px] lg:max-w-[280px]">
                         <span
                           aria-hidden="true"
-                          className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-[#64748B]"
+                          className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-[#64748B] dark:text-[#94A3B8]"
                         >
                           search
                         </span>
                         <input
-                          aria-label="Buscar por asignatura, docente o código"
-                          className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-2 pl-9 pr-8 text-xs text-[#1F2937] placeholder:text-[#64748B] focus:border-[#075477] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#075477]/20"
+                          aria-label={t('dashboard.search_placeholder')}
+                          className="w-full h-10 min-h-[40px] rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#F8FAFC] dark:bg-[#16243A] [data-theme=contrast]_&:bg-black py-2 pl-9 pr-8 text-xs text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white placeholder:text-[#64748B] dark:placeholder:text-[#94A3B8] focus:border-[#0B5575] dark:focus:border-[#67E8F9] [data-theme=contrast]_&:focus:border-[#FFD400] focus:bg-white dark:focus:bg-[#11182E] [data-theme=contrast]_&:focus:bg-black focus:outline-none focus:ring-2 focus:ring-[#0B5575]/20"
                           onChange={(e) => setSearchInput(e.target.value)}
-                          placeholder="Buscar por asignatura, docente o código"
+                          placeholder={t('dashboard.search_placeholder')}
                           type="search"
                           value={searchInput}
                         />
                         {searchInput && (
                           <button
                             aria-label="Limpiar búsqueda"
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1F2937]"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white"
                             onClick={() => setSearchInput('')}
                             type="button"
                           >
@@ -573,31 +590,31 @@ export function Dashboard() {
                         )}
                       </div>
 
-                      {/* Botón de Filtros en Pantallas Pequeñas (Recomendación 11) */}
+                      {/* Botón de Filtros en Pantallas Pequeñas */}
                       <button
                         aria-label="Abrir panel de filtros"
-                        className="inline-flex lg:hidden items-center justify-center gap-1.5 rounded-xl border border-[#dbe3ec] bg-white px-3 py-2 text-xs font-bold text-[#075477] hover:bg-[#f8fafc] shrink-0"
+                        className="inline-flex lg:hidden items-center justify-center gap-1.5 rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] [data-theme=contrast]_&:border-[#A6A6A6] h-10 px-3 text-xs font-bold text-[#0B5575] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] hover:bg-[#F8FAFC] dark:hover:bg-[#1D2F46] shrink-0"
                         onClick={() => setMobileFiltersOpen(true)}
                         type="button"
                       >
                         <span className="material-symbols-outlined text-base">tune</span>
-                        <span>Filtros {activeFiltersCount > 0 ? `· ${activeFiltersCount}` : ''}</span>
+                        <span>{t('dashboard.filters')} {activeFiltersCount > 0 ? `· ${activeFiltersCount}` : ''}</span>
                       </button>
 
-                      {/* Ordenamiento discreto */}
+                      {/* Ordenamiento fijo a la derecha */}
                       <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                         <label className="sr-only" htmlFor="sort-select">
-                          Ordenar asignaturas
+                          {t('dashboard.sort_by')}
                         </label>
                         <select
-                          className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] py-2 px-3 text-xs font-semibold text-[#1F2937] focus:border-[#075477] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#075477]/20"
+                          className="h-10 min-h-[40px] rounded-xl border border-[#CBD5E1] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#F8FAFC] dark:bg-[#16243A] [data-theme=contrast]_&:bg-black py-2 px-3 text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white focus:border-[#0B5575] dark:focus:border-[#67E8F9] [data-theme=contrast]_&:focus:border-[#FFD400] focus:bg-white dark:focus:bg-[#111B2E] [data-theme=contrast]_&:focus:bg-black focus:outline-none focus:ring-2 focus:ring-[#0B5575]/20"
                           id="sort-select"
                           onChange={(e) => handleSortChange(e.target.value)}
                           value={sortParam}
                         >
                           {SORT_OPTIONS.map((opt) => (
                             <option key={opt.id} value={opt.id}>
-                              {opt.label}
+                              {opt.i18nKey ? t(opt.i18nKey) : opt.label}
                             </option>
                           ))}
                         </select>
@@ -608,7 +625,7 @@ export function Dashboard() {
                   {/* Contador de resultados y estado de filtros */}
                   <div className="flex items-center justify-between px-1 text-xs text-[#64748b]">
                     <span>
-                      Mostrando <strong className="text-[#172033]">{filteredCourses.length}</strong> de <strong className="text-[#172033]">{courses.length}</strong> clases
+                      {t('dashboard.showing_courses', { shown: filteredCourses.length, total: courses.length })}
                     </span>
                     {activeFiltersCount > 0 && (
                       <button
@@ -616,7 +633,7 @@ export function Dashboard() {
                         onClick={handleClearFilters}
                         type="button"
                       >
-                        Limpiar filtros ({activeFiltersCount})
+                        {t('dashboard.clear_filters')} ({activeFiltersCount})
                       </button>
                     )}
                   </div>
@@ -645,30 +662,30 @@ export function Dashboard() {
                     </div>
                   ) : (
                     <EmptyState
-                      actionLabel="Limpiar filtros"
-                      description="No encontramos clases con estos filtros. Prueba eliminando algún filtro o realiza otra búsqueda."
+                      actionLabel={t('dashboard.clear_filters')}
+                      description={t('dashboard.no_courses_desc')}
                       onAction={handleClearFilters}
-                      title="No encontramos clases con estos filtros"
+                      title={t('dashboard.no_courses_title')}
                     />
                   )}
 
                   {/* Anuncios del Periodo */}
-                  <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 sm:p-6 shadow-xs">
-                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 mb-4">
-                      <h2 className="text-base font-bold text-[#1F2937]">
-                        Avisos Académicos
+                  <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-white bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-[#0D0D0D] p-5 sm:p-6 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] pb-3 mb-4">
+                      <h2 className="text-base font-bold text-[#0F172A] dark:text-white">
+                        {t('dashboard.announcements_title')}
                       </h2>
-                      <span className="text-xs text-[#64748B]">Semestre en curso</span>
+                      <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">{t('dashboard.current_semester')}</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {ANNOUNCEMENTS.map((a) => (
-                        <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 text-xs" key={a.id}>
-                          <div className="flex items-center justify-between text-[#64748B] mb-1">
-                            <span className="font-bold text-[#0B4F6C]">{a.category}</span>
-                            <span>{a.date}</span>
+                        <div className="rounded-xl border border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#F8FAFC] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] p-4 text-xs" key={a.id}>
+                          <div className="flex items-center justify-between text-[#64748B] dark:text-[#94A3B8] mb-1">
+                            <span className="font-bold text-[#0B5575] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF]">{a.category}</span>
+                            <span className="tabular-nums">{a.date}</span>
                           </div>
-                          <h3 className="font-bold text-[#1F2937] text-xs sm:text-sm">{a.title}</h3>
-                          <p className="text-[#4B5563] mt-1 line-clamp-2 leading-relaxed">{a.content}</p>
+                          <h3 className="font-bold text-[#0F172A] dark:text-white text-xs sm:text-sm">{a.title}</h3>
+                          <p className="text-[#475569] dark:text-[#CBD5E1] mt-1 line-clamp-2 leading-relaxed">{a.content}</p>
                         </div>
                       ))}
                     </div>
@@ -688,12 +705,12 @@ export function Dashboard() {
               {/* Vista: Clases Inscritas */}
               {activeView === 'courses' && (
                 <div className="space-y-6">
-                  <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 sm:p-6 shadow-xs">
+                  <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-white bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-[#0D0D0D] p-5 sm:p-6 shadow-xs">
                     <h1 className="text-2xl font-extrabold text-[#1F2937]">
-                      Clases Inscritas
+                      {t('dashboard.enrolled_courses')}
                     </h1>
                     <p className="text-xs sm:text-sm text-[#4B5563] mt-1">
-                      Listado oficial de asignaturas vigentes durante el Semestre Otoño 2026.
+                      {t('dashboard.enrolled_desc')}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -738,7 +755,7 @@ export function Dashboard() {
         </div>
 
         {/* Footer Discreto */}
-        <footer className="mt-12 border-t border-[#E2E8F0] bg-white py-6 text-center text-xs text-[#64748B]">
+        <footer className="mt-12 border-t border-[#E2E8F0] dark:border-[#2A3A52] [data-theme=contrast]_&:border-white bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-[#0D0D0D] py-6 text-center text-xs text-[#64748B] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
           Campus Virtual LMS · 2026
         </footer>
       </main>
@@ -765,114 +782,14 @@ export function Dashboard() {
         }}
       />
 
-      {/* Modal Interactivo de Aula Virtual (Conexión funcional del botón Ver Clase) */}
-      {classroomModalCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-2xl">
-            <button
-              aria-label="Cerrar aula virtual"
-              className="absolute right-4 top-4 rounded-full p-1.5 text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1F2937]"
-              onClick={() => setClassroomModalCourse(null)}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-xl">close</span>
-            </button>
-
-            <div className="border-b border-[#E2E8F0] pb-3">
-              <span className="font-mono text-xs font-bold text-[#0B4F6C]">
-                {classroomModalCourse.code} · Sec. {classroomModalCourse.section || 1}
-              </span>
-              <h3 className="text-lg font-extrabold text-[#1F2937] mt-0.5">
-                {classroomModalCourse.title}
-              </h3>
-              <p className="text-xs text-[#64748B] mt-0.5">
-                Docente: {classroomModalCourse.teacher} · Semestre Otoño 2026
-              </p>
-            </div>
-
-            <div className="my-4 space-y-3">
-              <div className="rounded-xl border border-[#BAE6FD] bg-[#F0F9FF] p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#0369A1] flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base">videocam</span>
-                    Sesión Sincrónica Activa
-                  </span>
-                  <span className="rounded-full bg-[#16856A] px-2 py-0.5 text-[10px] font-bold text-white">
-                    En Línea
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#0284C7] mt-1">
-                  Sala de clase en vivo habilitada para la sección.
-                </p>
-                <div className="mt-2.5 flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#0B4F6C] px-3 py-1.5 text-xs font-bold text-white shadow-xs">
-                    <span className="material-symbols-outlined text-sm">meeting_room</span>
-                    Aula Virtual Conectada
-                  </span>
-                  <span className="text-[10px] text-[#64748B]">Acceso institucional verificado</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  className="flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 hover:bg-[#F1F5F9] text-left transition"
-                  onClick={() => {
-                    handleOpenMaterials(classroomModalCourse)
-                    setClassroomModalCourse(null)
-                  }}
-                  type="button"
-                >
-                  <span className="material-symbols-outlined text-[#0B4F6C]">folder</span>
-                  <div>
-                    <p className="font-bold text-[#1F2937]">Material Didáctico</p>
-                    <p className="text-[10px] text-[#64748B]">Guías y recursos</p>
-                  </div>
-                </button>
-
-                <button
-                  className="flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 hover:bg-[#F1F5F9] text-left transition"
-                  onClick={() => {
-                    handleOpenInteraction(classroomModalCourse)
-                    setClassroomModalCourse(null)
-                  }}
-                  type="button"
-                >
-                  <span className="material-symbols-outlined text-[#16856A]">forum</span>
-                  <div>
-                    <p className="font-bold text-[#1F2937]">Foro de Consulta</p>
-                    <p className="text-[10px] text-[#64748B]">Canal de sección</p>
-                  </div>
-                </button>
-              </div>
-
-              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#1F2937]">Progreso en la Asignatura</span>
-                  <span className="font-mono font-bold text-[#0B4F6C]">
-                    {classroomModalCourse.progress || 0}%
-                  </span>
-                </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#E2E8F0]">
-                  <div
-                    className="h-full bg-[#0B4F6C] transition-all"
-                    style={{ width: `${classroomModalCourse.progress || 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-[#E2E8F0] pt-3">
-              <button
-                className="rounded-xl border border-[#E2E8F0] bg-white px-4 py-2 text-xs font-bold text-[#4B5563] hover:bg-[#F8FAFC]"
-                onClick={() => setClassroomModalCourse(null)}
-                type="button"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Interactivo de Aula Virtual */}
+      <ClassroomModal
+        course={classroomModalCourse}
+        isOpen={Boolean(classroomModalCourse)}
+        onClose={() => setClassroomModalCourse(null)}
+        onOpenInteraction={handleOpenInteraction}
+        onOpenMaterials={handleOpenMaterials}
+      />
 
       <DidacticMaterialModal
         course={activeModalCourse}
@@ -904,26 +821,26 @@ export function Dashboard() {
               }}
               type="button"
             >
-              Limpiar todos
+              {t('dashboard.drawer_clear_all')}
             </button>
             <button
               className="rounded-[10px] bg-[#075477] px-4 py-2 text-xs font-bold text-white hover:bg-[#064563]"
               onClick={() => setMobileFiltersOpen(false)}
               type="button"
             >
-              Aplicar filtros
+              {t('dashboard.drawer_apply')}
             </button>
           </div>
         }
         onClose={() => setMobileFiltersOpen(false)}
         open={mobileFiltersOpen}
-        subtitle="Herramientas de Consulta"
-        title="Filtros y Ordenamiento"
+        subtitle={t('dashboard.drawer_subtitle')}
+        title={t('dashboard.drawer_title')}
       >
         <div className="space-y-5">
           <div>
             <label className="block text-xs font-bold text-[#172033] mb-2">
-              Estado de la Asignatura
+              {t('dashboard.drawer_course_status')}
             </label>
             <div className="grid grid-cols-1 gap-1.5">
               {TABS.map((tab) => {
@@ -944,7 +861,7 @@ export function Dashboard() {
                     }}
                     type="button"
                   >
-                    <span>{tab.label}</span>
+                    <span>{tab.i18nKey ? t(tab.i18nKey) : tab.label}</span>
                     <span
                       className={`text-[10px] rounded-full px-1.5 py-0.2 font-black ${
                         isSelected ? 'bg-white/20 text-white' : 'bg-[#e2e8f0] text-[#172033]'
@@ -960,7 +877,7 @@ export function Dashboard() {
 
           <div className="border-t border-[#dbe3ec] pt-4">
             <label className="block text-xs font-bold text-[#172033] mb-2">
-              Criterio de Ordenamiento
+              {t('dashboard.drawer_sort_criteria')}
             </label>
             <div className="grid grid-cols-1 gap-1.5">
               {SORT_OPTIONS.map((opt) => {
@@ -980,7 +897,7 @@ export function Dashboard() {
                     }}
                     type="button"
                   >
-                    <span>{opt.label}</span>
+                    <span>{opt.i18nKey ? t(opt.i18nKey) : opt.label}</span>
                     {isSelected && (
                       <span className="material-symbols-outlined text-sm">check</span>
                     )}

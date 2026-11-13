@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Dialog } from './ui/Dialog'
 import { Button } from './ui/Button'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export function DidacticMaterialModal({ course, isOpen, onClose }) {
+  const { t } = useLanguage()
   const [downloadingId, setDownloadingId] = useState(null)
   const [downloadedId, setDownloadedId] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
@@ -105,11 +107,11 @@ export function DidacticMaterialModal({ course, isOpen, onClose }) {
         description={`Profesor responsable: ${course.teacher} · Semestre Otoño 2026`}
         footer={
           <div className="flex items-center justify-between w-full">
-            <span className="text-xs text-[#64748b]">
-              {materials.length} recursos de aprendizaje disponibles
+            <span className="text-xs text-[#64748b] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9]">
+              {t('didactic_modal.resources_count', { count: materials.length })}
             </span>
             <Button onClick={onClose} size="sm" variant="primary">
-              Cerrar
+              {t('didactic_modal.close')}
             </Button>
           </div>
         }
@@ -117,7 +119,7 @@ export function DidacticMaterialModal({ course, isOpen, onClose }) {
         open={isOpen}
         size="lg"
         subtitle={`${course.code} ${course.section ? `· Sección ${course.section}` : ''}`}
-        title="Material Didáctico y Recursos de Clase"
+        title={t('didactic_modal.title')}
       >
         <div className="space-y-3">
           {materials.map((file) => {
@@ -127,7 +129,7 @@ export function DidacticMaterialModal({ course, isOpen, onClose }) {
 
             return (
               <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[10px] border border-[#dbe3ec] bg-white p-3.5 hover:bg-[#f8fafc] hover:border-[#cbd5e1] transition"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[10px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] p-3.5 hover:bg-[#f8fafc] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] transition"
                 key={file.id}
               >
                 {/* Metadatos y tipo de archivo */}
@@ -142,10 +144,10 @@ export function DidacticMaterialModal({ course, isOpen, onClose }) {
                   </span>
 
                   <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-[#172033] truncate leading-snug">
+                    <h4 className="text-xs font-bold text-[#172033] dark:text-[#F8FAFC] [data-theme=contrast]_&:text-white truncate leading-snug">
                       {file.name}
                     </h4>
-                    <p className="text-[11px] text-[#64748b] mt-0.5">
+                    <p className="text-[11px] text-[#64748b] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9] mt-0.5">
                       {fileConf.label} · {file.size} · Publicado el {file.date}
                     </p>
                   </div>
@@ -154,20 +156,20 @@ export function DidacticMaterialModal({ course, isOpen, onClose }) {
                 {/* Acciones claras: Vista previa y Descargar */}
                 <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                   <button
-                    aria-label={`Vista previa de ${file.name}`}
-                    className="rounded-[8px] border border-[#dbe3ec] bg-white px-3 py-1.5 text-xs font-bold text-[#075477] hover:bg-[#f5f7fb] hover:border-[#cbd5e1] transition"
+                    aria-label={`${t('didactic_modal.preview')}: ${file.name}`}
+                    className="rounded-[8px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-black px-3 py-1.5 text-xs font-bold text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] hover:bg-[#f5f7fb] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] transition"
                     onClick={() => setPreviewMaterial(file)}
                     type="button"
                   >
-                    Vista previa
+                    {t('didactic_modal.preview')}
                   </button>
 
                   <button
-                    aria-label={`Descargar ${file.name}`}
+                    aria-label={`${t('didactic_modal.download')}: ${file.name}`}
                     className={`inline-flex items-center gap-1.5 rounded-[8px] px-3.5 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
                       downloadedId === file.id
-                        ? 'bg-[#16856A] text-white'
-                        : 'bg-[#075477] text-white hover:bg-[#064563]'
+                        ? 'bg-[#16856A] dark:bg-[#123B30] dark:text-[#6EE7B7] [data-theme=contrast]_&:bg-black [data-theme=contrast]_&:text-[#00F084] [data-theme=contrast]_&:border-2 [data-theme=contrast]_&:border-[#00F084] text-white'
+                        : 'bg-[#075477] dark:bg-[#0E7490] dark:hover:bg-[#155E75] [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black [data-theme=contrast]_&:hover:bg-[#FFD400] text-white hover:bg-[#064563]'
                     }`}
                     disabled={isDownloading}
                     onClick={() => handleDownload(file)}
@@ -178,18 +180,18 @@ export function DidacticMaterialModal({ course, isOpen, onClose }) {
                     </span>
                     <span>
                       {downloadedId === file.id
-                        ? '¡Descargado!'
+                        ? t('didactic_modal.downloaded')
                         : isDownloading
-                        ? 'Descargando...'
-                        : 'Descargar'}
+                        ? t('didactic_modal.downloading')
+                        : t('didactic_modal.download')}
                     </span>
                   </button>
 
                   <button
-                    aria-label={`Copiar enlace de ${file.name}`}
-                    className="grid size-8 place-items-center rounded-[8px] border border-[#dbe3ec] bg-white text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#172033] transition"
+                    aria-label={`${t('didactic_modal.copy_link')}: ${file.name}`}
+                    className="grid size-8 place-items-center rounded-[8px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-black text-[#64748b] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-white hover:bg-[#f1f5f9] dark:hover:bg-[#1D2F46] [data-theme=contrast]_&:hover:bg-[#262626] transition"
                     onClick={() => handleCopyLink(file)}
-                    title={isCopied ? '¡Enlace copiado!' : 'Copiar enlace directo'}
+                    title={isCopied ? t('didactic_modal.copied') : t('didactic_modal.copy_link')}
                     type="button"
                   >
                     <span className="material-symbols-outlined text-sm">
@@ -214,37 +216,37 @@ export function DidacticMaterialModal({ course, isOpen, onClose }) {
                 size="sm"
                 variant="secondary"
               >
-                Descargar copia
+                {t('didactic_modal.download_copy')}
               </Button>
               <Button
                 onClick={() => setPreviewMaterial(null)}
                 size="sm"
                 variant="primary"
               >
-                Cerrar vista previa
+                {t('didactic_modal.close_preview')}
               </Button>
             </div>
           }
           onClose={() => setPreviewMaterial(null)}
           open={Boolean(previewMaterial)}
           size="md"
-          subtitle="Visor de Material Didáctico"
+          subtitle={t('didactic_modal.preview_title')}
           title={previewMaterial.name}
         >
           <div className="space-y-4">
-            <div className="rounded-[10px] border border-[#dbe3ec] bg-[#f8fafc] p-4 text-xs leading-relaxed space-y-2">
-              <div className="flex items-center gap-2 text-[#075477] font-bold">
+            <div className="rounded-[10px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-[#f8fafc] dark:bg-[#16243A] [data-theme=contrast]_&:bg-[#0D0D0D] p-4 text-xs leading-relaxed space-y-2">
+              <div className="flex items-center gap-2 text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF] font-bold">
                 <span className="material-symbols-outlined text-base">visibility</span>
-                <span>Previsualización del Contenido:</span>
+                <span>{t('didactic_modal.preview_label')}</span>
               </div>
-              <p className="text-[#172033]">
+              <p className="text-[#172033] dark:text-[#CBD5E1] [data-theme=contrast]_&:text-[#F2F2F2]">
                 {previewMaterial.contentPreview || 'Previsualización de contenido didáctico disponible para lectura directa en plataforma.'}
               </p>
             </div>
 
-            <div className="rounded-[8px] border border-[#dbe3ec] bg-white p-3 text-[11px] text-[#64748b] flex items-center justify-between">
-              <span>Repositorio institucional validado</span>
-              <span className="font-mono text-[#075477]">SHA256: 7f8a...3b21</span>
+            <div className="rounded-[8px] border border-[#dbe3ec] dark:border-[#2A3A52] [data-theme=contrast]_&:border-[#A6A6A6] bg-white dark:bg-[#111B2E] [data-theme=contrast]_&:bg-black p-3 text-[11px] text-[#64748b] dark:text-[#94A3B8] [data-theme=contrast]_&:text-[#D9D9D9] flex items-center justify-between">
+              <span>{t('didactic_modal.verified_repo')}</span>
+              <span className="font-mono text-[#075477] dark:text-[#67E8F9] [data-theme=contrast]_&:text-[#00B7FF]">SHA256: 7f8a...3b21</span>
             </div>
           </div>
         </Dialog>

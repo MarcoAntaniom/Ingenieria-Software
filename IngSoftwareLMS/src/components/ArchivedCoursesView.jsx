@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export function ArchivedCoursesView({
   archivedCourses,
   onOpenSyllabus,
   onOpenMaterials,
 }) {
+  const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState('')
 
   const filtered = archivedCourses.filter(
@@ -17,19 +19,19 @@ export function ArchivedCoursesView({
   return (
     <div className="space-y-6">
       {/* Encabezado */}
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-line bg-card p-6 shadow-xs md:flex-row md:items-center">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-line [data-theme=contrast]_&:border-white bg-card p-6 shadow-xs md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-2 text-secondary">
             <span className="material-symbols-outlined">history_edu</span>
             <span className="text-xs font-bold uppercase tracking-wider">
-              Historial y Registros Pasados
+              {t('archived.badge')}
             </span>
           </div>
           <h2 className="text-2xl font-extrabold text-ink mt-1">
-            Repositorio de Cursos Archivados
+            {t('archived.title')}
           </h2>
           <p className="text-xs text-muted mt-0.5">
-            Consulta el contenido de asignaturas acreditadas en semestres previos, actas de notas oficiales y material de estudio.
+            {t('archived.subtitle')}
           </p>
         </div>
 
@@ -40,7 +42,7 @@ export function ArchivedCoursesView({
           <input
             className="w-full rounded-xl border border-line bg-subtle py-2 pl-9 pr-3 text-xs focus:border-primary focus:bg-card focus:ring-0"
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar en cursos anteriores..."
+            placeholder={t('archived.search_placeholder')}
             type="search"
             value={searchTerm}
           />
@@ -51,7 +53,7 @@ export function ArchivedCoursesView({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filtered.map((course) => (
           <div
-            className="flex flex-col justify-between rounded-2xl border border-line bg-card p-5 shadow-xs hover:shadow-md transition"
+            className="flex flex-col justify-between rounded-2xl border border-line [data-theme=contrast]_&:border-[#A6A6A6] bg-card p-5 shadow-xs hover:shadow-md transition"
             key={course.id}
           >
             <div>
@@ -60,7 +62,7 @@ export function ArchivedCoursesView({
                   {course.code} {course.section ? `· Sec. ${course.section}` : ''}
                 </span>
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
-                  Acreditada · Acta Cerrada
+                  {t('archived.accredited_badge')}
                 </span>
               </div>
 
@@ -79,8 +81,8 @@ export function ArchivedCoursesView({
               {/* Registro de Cierre y Acreditación */}
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 text-xs text-emerald-950 flex items-center justify-between">
                 <div>
-                  <span className="font-bold block">Calificación Final Oficial</span>
-                  <span className="text-[11px] text-emerald-800">Cierre de ciclo aprobado</span>
+                  <span className="font-bold block">{t('archived.final_grade_label')}</span>
+                  <span className="text-[11px] text-emerald-800">{t('archived.final_grade_desc')}</span>
                 </div>
                 <span className="text-2xl font-black text-emerald-700">
                   {course.finalGrade || '6.4'}
@@ -96,7 +98,7 @@ export function ArchivedCoursesView({
                 type="button"
               >
                 <span className="material-symbols-outlined text-sm text-secondary">folder</span>
-                Material de estudio
+                {t('archived.study_material')}
               </button>
               <button
                 className="flex items-center gap-1.5 rounded-lg border border-line bg-subtle px-3 py-1.5 text-xs font-bold text-primary hover:bg-secondary-container hover:text-on-secondary-container transition"
@@ -104,7 +106,7 @@ export function ArchivedCoursesView({
                 type="button"
               >
                 <span className="material-symbols-outlined text-sm">menu_book</span>
-                Ver syllabus histórico
+                {t('archived.official_syllabus')}
               </button>
             </div>
           </div>

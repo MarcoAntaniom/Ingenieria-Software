@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export function TasksCenterView({ courses, onTaskSubmitted }) {
+  const { t } = useLanguage()
   const [selectedTask, setSelectedTask] = useState(null)
   const [submissionModalOpen, setSubmissionModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -95,24 +97,24 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
       )}
 
       {/* Encabezado del Módulo */}
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-line bg-card p-6 shadow-xs md:flex-row md:items-center">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-line [data-theme=contrast]_&:border-white bg-card p-6 shadow-xs md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-2 text-secondary">
             <span className="material-symbols-outlined">assignment_turned_in</span>
             <span className="text-xs font-bold uppercase tracking-wider">
-              Gestión de Evaluaciones y Entregables
+              {t('tasks.badge')}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1">
             <h2 className="text-2xl font-extrabold text-ink">
-              Centro de Tareas y Pendientes
+              {t('tasks.title')}
             </h2>
             <span className="grid size-6 place-items-center rounded-full bg-danger text-xs font-bold text-white shadow-xs">
               {totalCount}
             </span>
           </div>
           <p className="text-xs text-muted mt-0.5">
-            Monitorea los plazos de entrega requeridos, pautas técnicas y envía tus comprobantes oficiales con marca de tiempo.
+            {t('tasks.subtitle')}
           </p>
         </div>
 
@@ -120,11 +122,11 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
         <div className="flex items-center gap-3">
           <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-2.5 text-center">
             <span className="block text-xl font-black text-danger">{urgentCount}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-danger">Urgentes</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-danger">{t('tasks.urgent_kpi')}</span>
           </div>
           <div className="rounded-xl border border-line bg-subtle px-4 py-2.5 text-center">
             <span className="block text-xl font-black text-primary">{totalCount}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Total Requeridas</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted">{t('tasks.total_kpi')}</span>
           </div>
         </div>
       </div>
@@ -134,7 +136,9 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
         {tasks.map((task) => (
           <div
             className={`rounded-2xl border bg-card p-5 shadow-xs transition hover:shadow-md ${
-              task.urgent ? 'border-danger/40 ring-1 ring-danger/20' : 'border-line'
+              task.urgent
+                ? 'border-line border-l-4 border-l-[#B42318] dark:border-l-[#FCA5A5] [data-theme=contrast]_&:border-l-[#FF5A67] [data-theme=contrast]_&:border-[#A6A6A6]'
+                : 'border-line [data-theme=contrast]_&:border-[#A6A6A6]'
             }`}
             key={task.id}
           >
@@ -148,9 +152,9 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                     {task.type}
                   </span>
                   {task.urgent && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-danger text-white px-2 py-0.5 text-[10px] font-bold animate-pulse">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#B42318] text-white dark:bg-[#46191D] dark:text-[#FCA5A5] [data-theme=contrast]_&:bg-[#FF5A67] [data-theme=contrast]_&:text-black px-2 py-0.5 text-[10px] font-bold animate-pulse">
                       <span className="material-symbols-outlined text-xs">timer</span>
-                      Vencimiento prioritario
+                      {t('tasks.urgent_tag')}
                     </span>
                   )}
                 </div>
@@ -160,10 +164,10 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
 
                 {/* Pautas Técnicas Breves */}
                 {task.guidelines && (
-                  <div className="rounded-xl border border-line bg-subtle/80 p-3 text-xs text-ink space-y-1">
+                  <div className="rounded-xl border border-line [data-theme=contrast]_&:border-[#A6A6A6] bg-subtle/80 p-3 text-xs text-ink space-y-1">
                     <span className="flex items-center gap-1.5 font-bold text-secondary text-[11px] uppercase tracking-wider">
                       <span className="material-symbols-outlined text-sm">build</span>
-                      Requisitos técnicos y pautas de entrega
+                      {t('tasks.guidelines_label')}
                     </span>
                     <p className="text-[11px] text-muted">{task.guidelines}</p>
                   </div>
@@ -172,7 +176,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                 <div className="flex flex-wrap items-center gap-4 text-xs pt-1 text-muted">
                   <span className="flex items-center gap-1 font-bold text-primary">
                     <span className="material-symbols-outlined text-sm text-secondary">event</span>
-                    Vence: {task.dueDate}
+                    {t('tasks.due_prefix')} {task.dueDate}
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm text-muted">person</span>
@@ -180,7 +184,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                   </span>
                   {task.allowLate && (
                     <span className="text-amber-800 text-[11px] font-semibold">
-                      (Acepta entregas con penalización del 1% por hora)
+                      {t('tasks.allow_late_notice')}
                     </span>
                   )}
                 </div>
@@ -188,12 +192,12 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
 
               {/* Botón de Entrega */}
               <button
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-white shadow-xs hover:bg-primary-dark transition active:scale-95 shrink-0 self-start sm:self-center"
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary [data-theme=contrast]_&:bg-white [data-theme=contrast]_&:text-black [data-theme=contrast]_&:hover:bg-[#FFD400] px-5 py-3 text-xs font-bold text-white shadow-xs hover:bg-primary-dark transition active:scale-95 shrink-0 self-start sm:self-center"
                 onClick={() => openSubmission(task)}
                 type="button"
               >
                 <span className="material-symbols-outlined text-base">upload_file</span>
-                Entregar actividad
+                {t('tasks.submit_btn')}
               </button>
             </div>
           </div>
@@ -203,7 +207,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
       {/* Modal de Envío de Actividad Evaluativa */}
       {submissionModalOpen && selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-2xl rounded-2xl border border-line bg-card p-6 shadow-2xl">
+          <div className="relative w-full max-w-2xl rounded-2xl border border-line [data-theme=contrast]_&:border-white bg-card p-6 shadow-2xl">
             <button
               aria-label="Cerrar modal"
               className="absolute right-4 top-4 rounded-full p-1.5 text-muted hover:bg-subtle hover:text-ink"
@@ -230,19 +234,19 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                 {/* Zona de Dropzone para Archivos */}
                 <div>
                   <label className="block text-xs font-bold text-ink mb-1.5">
-                    Archivo adjunto de la entrega (ZIP, PDF, DOCX, máx 50MB)
+                    {t('tasks.modal_dropzone')}
                   </label>
                   <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-line bg-subtle p-6 cursor-pointer hover:border-secondary hover:bg-secondary/5 transition">
                     <span className="material-symbols-outlined text-4xl text-secondary mb-2">
                       cloud_upload
                     </span>
                     <span className="text-xs font-bold text-ink">
-                      {submissionFile ? submissionFile.name : 'Haz clic para seleccionar o arrastra tu archivo aquí'}
+                      {submissionFile ? submissionFile.name : t('tasks.modal_dropzone')}
                     </span>
                     <span className="text-[11px] text-muted mt-1">
                       {submissionFile
                         ? `${(submissionFile.size / (1024 * 1024)).toFixed(2)} MB`
-                        : 'Formatos válidos: .pdf, .docx, .zip, .rar, .sql (Hasta 50MB)'}
+                        : 'Formatos: .pdf, .docx, .zip, .rar, .sql (Max 50MB)'}
                     </span>
                     <input
                       className="hidden"
@@ -259,12 +263,12 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                 {/* Comentarios del Estudiante */}
                 <div>
                   <label className="block text-xs font-bold text-ink mb-1">
-                    Comentarios u observaciones para el docente (opcional)
+                    {t('tasks.modal_comment_label')}
                   </label>
                   <textarea
                     className="w-full rounded-xl border border-line bg-subtle p-3 text-xs focus:border-primary focus:bg-card focus:ring-0"
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Escribe comentarios, integrantes del grupo o instrucciones especiales para la revisión..."
+                    placeholder={t('tasks.modal_comment_label')}
                     rows={3}
                     value={comment}
                   />
@@ -278,7 +282,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                     type="button"
                   >
                     <span className="material-symbols-outlined text-base">save</span>
-                    Guardar borrador
+                    {t('tasks.modal_draft_btn')}
                   </button>
                   <div className="flex gap-2">
                     <button
@@ -286,7 +290,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                       onClick={() => setSubmissionModalOpen(false)}
                       type="button"
                     >
-                      Cancelar
+                      {t('calendar.close')}
                     </button>
                     <button
                       className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-primary-dark transition disabled:opacity-70"
@@ -294,7 +298,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                       type="submit"
                     >
                       <span className="material-symbols-outlined text-base">check_circle</span>
-                      {submitting ? 'Enviando y generando sello...' : 'Confirmar envío definitivo'}
+                      {submitting ? t('tasks.modal_submitting') : t('tasks.modal_confirm_btn')}
                     </button>
                   </div>
                 </div>
@@ -308,7 +312,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                   </span>
                   <div>
                     <h3 className="text-lg font-black text-emerald-900">
-                      ¡Entrega Oficial Confirmada con Éxito!
+                      {t('tasks.receipt_title')}
                     </h3>
                     <p className="text-xs text-emerald-800">
                       Tu archivo ha sido sellado con marca de tiempo y almacenado en el repositorio institucional.
@@ -318,7 +322,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
 
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-xs space-y-2 text-ink font-mono">
                   <div className="flex justify-between border-b border-emerald-200/60 pb-1.5">
-                    <span className="text-muted font-sans font-bold">Código de comprobante:</span>
+                    <span className="text-muted font-sans font-bold">{t('tasks.receipt_code')}</span>
                     <span className="font-bold text-primary">{submissionReceipt.id}</span>
                   </div>
                   <div className="flex justify-between border-b border-emerald-200/60 pb-1.5">
@@ -326,15 +330,15 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                     <span className="font-bold">{submissionReceipt.taskTitle}</span>
                   </div>
                   <div className="flex justify-between border-b border-emerald-200/60 pb-1.5">
-                    <span className="text-muted font-sans font-bold">Archivo certificado:</span>
+                    <span className="text-muted font-sans font-bold">Archivo:</span>
                     <span>{submissionReceipt.fileName} ({submissionReceipt.fileSize})</span>
                   </div>
                   <div className="flex justify-between border-b border-emerald-200/60 pb-1.5">
-                    <span className="text-muted font-sans font-bold">Marca de tiempo exacta:</span>
+                    <span className="text-muted font-sans font-bold">Timestamp:</span>
                     <span className="font-bold text-emerald-800">{submissionReceipt.formattedTime}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 pt-1">
-                    <span className="text-muted font-sans font-bold">Hash criptográfico SHA-256:</span>
+                    <span className="text-muted font-sans font-bold">{t('tasks.receipt_digital_hash')}</span>
                     <span className="text-[10px] break-all text-muted">{submissionReceipt.sha256}</span>
                   </div>
                 </div>
@@ -345,7 +349,7 @@ export function TasksCenterView({ courses, onTaskSubmitted }) {
                     onClick={() => setSubmissionModalOpen(false)}
                     type="button"
                   >
-                    Cerrar y volver al listado
+                    {t('tasks.receipt_close')}
                   </button>
                 </div>
               </div>

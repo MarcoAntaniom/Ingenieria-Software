@@ -126,6 +126,24 @@ class UsuarioView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Regla RBAC estricta: Un usuario con rol 'Estudiante' no puede alterar sus datos legales de identidad oficiales
+        is_student = (
+            getattr(request.user, 'rol', None) and 
+            (request.user.rol.nombre.lower() == 'estudiante' or request.user.rol.codigo.upper() == 'ESTUDIANTE')
+        )
+        if is_student:
+            legal_fields = {'rut', 'nombres', 'apellidos', 'correo_institucional', 'carrera', 'matricula', 'plan_estudios'}
+            attempted_fields = set(request.data.keys()).intersection(legal_fields)
+            if attempted_fields:
+                return Response(
+                    {
+                        "mensaje": "Los estudiantes no tienen autorización para modificar sus datos legales de identidad oficiales. Para rectificaciones contacte a Registro Curricular.",
+                        "error": "Permiso denegado (RBAC 403 Forbidden)",
+                        "campos_bloqueados": list(attempted_fields)
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         # Validar los nuevos datos del usuario existente.
         serializer = UsuarioSerializer(
             usuario,
@@ -151,6 +169,9 @@ class UsuarioView(APIView):
             },
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    def patch(self, request, pk):
+        return self.put(request, pk)
 
 class PerfilEstudianteView(APIView):
     

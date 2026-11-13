@@ -104,3 +104,30 @@ class LoginSecurityTests(TestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_estudiante_no_puede_modificar_datos_legales_403(self):
+        """Un estudiante autenticado no puede alterar sus datos legales de identidad (403 Forbidden)."""
+        self.client.force_authenticate(user=self.usuario_activo)
+        # Intento de modificar nombre o RUT
+        response = self.client.put(
+            f'/api/v1/usuarios/update/{self.usuario_activo.id}/',
+            {
+                'nombres': 'Esteban Hacker',
+                'rut': '11.111.111-1'
+            },
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn('autorización', str(response.data))
+
+    def test_estudiante_patch_bloqueado_403(self):
+        """Un estudiante autenticado vía PATCH tampoco puede alterar datos oficiales."""
+        self.client.force_authenticate(user=self.usuario_activo)
+        response = self.client.patch(
+            f'/api/v1/usuarios/update/{self.usuario_activo.id}/',
+            {
+                'correo_institucional': 'nuevo.correo@universidad.cl'
+            },
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

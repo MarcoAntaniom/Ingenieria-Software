@@ -66,6 +66,31 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.set('Authorization', `Bearer ${token}`)
   }
+
+  // Capa de servicio RBAC: Bloqueo estricto de modificación de datos de identidad en rol Estudiante
+  const method = (config.method || '').toUpperCase()
+  if ((method === 'PUT' || method === 'PATCH') && config.url?.includes('usuarios/update/')) {
+    const role = localStorage.getItem('lms_user_role') || 'Estudiante'
+    if (role.toLowerCase() === 'estudiante') {
+      const payload = typeof config.data === 'string' ? JSON.parse(config.data || '{}') : (config.data || {})
+      const legalFields = ['rut', 'nombres', 'apellidos', 'correo_institucional', 'carrera', 'matricula', 'plan_estudios']
+      const attempted = Object.keys(payload).filter((k) => legalFields.includes(k))
+      if (attempted.length > 0) {
+        const error = new Error('Los estudiantes no tienen autorización para modificar sus datos legales de identidad oficiales. Para rectificaciones contacte a Registro Curricular.')
+        error.response = {
+          status: 403,
+          statusText: 'Forbidden',
+          data: {
+            mensaje: 'Los estudiantes no tienen autorización para modificar sus datos legales de identidad oficiales. Para rectificaciones contacte a Registro Curricular.',
+            error: 'Permiso denegado (RBAC 403 Forbidden)',
+            campos_bloqueados: attempted,
+          },
+        }
+        return Promise.reject(error)
+      }
+    }
+  }
+
   return config
 })
 
