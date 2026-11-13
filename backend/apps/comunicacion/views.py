@@ -1,11 +1,32 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-from .models import Foro, TemaForo, MensajeForo
-from .serializers import ForoSerializer, TemaForoSerializer, MensajeForoSerializer
+from .models import Anuncio, Foro, TemaForo, MensajeForo
+from .serializers import AnuncioSerializer, ForoSerializer, TemaForoSerializer, MensajeForoSerializer
 from .models import Conversacion, MensajeDirecto
 from .serializers import MensajeDirectoSerializer
 from .services import enviar_mensaje_privado
+
+
+class AnuncioViewSet(viewsets.ModelViewSet):
+    queryset = Anuncio.objects.all().order_by('-creado_en')
+    serializer_class = AnuncioSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(autor=self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.autor_id != self.request.user.pk:
+            raise PermissionDenied('Solo el autor puede editar este anuncio.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.autor_id != self.request.user.pk:
+            raise PermissionDenied('Solo el autor puede eliminar este anuncio.')
+        instance.delete()
+
 
 class ForoViewSet(viewsets.ModelViewSet):
     queryset = Foro.objects.all().order_by('-creado_en')
