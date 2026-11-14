@@ -1,50 +1,70 @@
-# React + Vite
+# Campus Virtual LMS
 
-## Campus Virtual LMS
+## Desarrollo
 
-### Ejecutar el frontend
+Desde esta carpeta instala dependencias con `npm ci` y ejecuta `npm run dev`.
+En desarrollo el cliente usa `/api/v1/`; Vite reenvía `/api/` a Django en
+`http://127.0.0.1:8000`. En producción define `VITE_API_URL` con el origen y
+prefijo `/api/v1/` del servidor (ver `.env.example`).
 
-Desde esta carpeta, instala las dependencias con `npm install` y ejecuta `npm run dev`.
-En desarrollo, Vite reenvía las peticiones `/api/` a Django en `http://127.0.0.1:8000`.
-Para producción, define `VITE_API_URL` en `.env.local`, incluyendo el prefijo `/api/v1/`.
+## Contrato de API disponible
 
-### Contrato de autenticación esperado
+- `POST usuarios/login/` recibe `correo_institucional` y `password`; los tokens
+  y usuario vienen dentro de `datos`.
+- `GET usuarios/me/` devuelve el perfil actual en `datos`. El frontend consulta
+  este endpoint tras login y refresh; obtiene el rol del servidor en
+  `datos.rol.codigo`.
+- `POST usuarios/refresh/` recibe `refresh` y devuelve `access` y un nuevo
+  `refresh`.
+- Los endpoints protegidos usan `Authorization: Bearer`.
+- El backend actual no publica `usuarios/logout/` ni un `GET` para consultar el
+  perfil estudiante/docente.
 
-- `POST usuarios/login/` recibe `correo_institucional` y `password`.
-- La respuesta incluye `access`, `refresh` y `user`.
-- `POST usuarios/refresh/` recibe `refresh` y devuelve `access`; puede devolver un nuevo `refresh`.
-- Los endpoints protegidos usan el token de acceso en la cabecera `Authorization: Bearer`.
+El contrato detallado, sus envolturas, campos, permisos, paginación e
+inconsistencias está en [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md). Se
+auditó la rama `backend` en el commit indicado allí; esa carpeta no está
+materializada en la rama frontend.
 
-El frontend renueva el acceso al cargar y ante respuestas `401`, mantiene el token de
-acceso en memoria y guarda el token de renovación en `sessionStorage`. La sesión termina
-al cerrar el navegador o cuando el servidor rechaza la renovación. El cierre de sesión
-elimina las credenciales locales; para revocar tokens en el servidor hace falta un
-endpoint de revocación.
+El panel consulta `/api/v1/academico/inscripciones/` sin enviar un ID del
+cliente. El backend filtra por el usuario autenticado cuando existe un perfil
+estudiante. No existe `/academico/cursos/` ni un filtro `?estudiante=`. El
+listado usa paginación del servidor (`page`, 20 resultados); la búsqueda del
+cliente solo filtra la página cargada porque no hay filtros de búsqueda
+publicados. Avance, docente y tareas no se devuelven y se muestran como «Sin
+datos»; no se ofrecen pestañas que dependan de esos datos.
 
-### Seguridad e integración pendiente
+## Rutas y roles de interfaz
 
-El backend Django está en `../backend`; los pasos de instalación y arranque están en
-[`backend/README.md`](../backend/README.md). El panel obtiene sus cursos del endpoint
-autenticado `/api/v1/academico/cursos/`. El progreso no se inventa: queda como no
-disponible hasta que el modelo académico incluya datos de avance.
+- Público: `/login`.
+- Estudiante: `/dashboard` (inscripciones disponibles).
+- Docente: `/teacher/sections`; administrador: `/admin/users`.
+- Módulos comunes: `/profile`, `/notifications`, `/calendar`.
+- Estudiante: `/courses/:courseId`, `/tasks/:taskId`,
+  `/receipts/:receiptId`, `/student/pending`, `/student/grades`, `/messages`.
+- Docente: `/teacher/tasks/new`, `/teacher/tasks/:taskId/edit`,
+  `/teacher/review`, `/teacher/announcements`, `/teacher/material`,
+  `/teacher/forums`.
+- Administrador: `/admin/academic`, `/admin/enrollments`, `/admin/audit`.
+- Errores de interfaz: `/403` y cualquier ruta desconocida muestra 404.
 
-Las rutas protegidas del frontend solo controlan la navegación: cada endpoint del
-backend debe autenticar al usuario y verificar en el servidor su rol, matrícula y
-permisos sobre cada curso, entrega y archivo. El refresh token se mantiene en
-`sessionStorage` durante esta integración con JWT; para producción, lo preferible es
-una cookie `HttpOnly`, `Secure` y `SameSite` con protección CSRF adecuada.
+Los módulos sin endpoint muestran «Módulo no disponible» y nunca usan datos
+ficticios. `VITE_ENABLE_UNAVAILABLE_MODULES=true` permite mostrar sus enlaces
+adicionales en la navegación; activarlo no habilita operaciones del backend.
+Los guards y el rol en memoria son solo UX: la autorización efectiva corresponde
+al servidor.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Sesión y seguridad
 
-Currently, two official plugins are available:
+El access token se mantiene en memoria; el refresh token permanece en
+`sessionStorage` mientras el backend no admita cookie HttpOnly. No se persisten
+datos del perfil. Para migrar, el backend debe ofrecer cookie
+`HttpOnly; Secure; SameSite`, protección CSRF, rotación y CORS con credenciales;
+entonces se elimina el refresh de `sessionStorage`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Los errores de 403 muestran una pantalla de permiso denegado y los 5xx un
+mensaje amigable. El bloqueo visual del login (5 intentos por 60 segundos) no
+sustituye rate limiting en el servidor.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Para producción configura CSP (incluyendo los orígenes permitidos para fuentes
+y API), `X-Frame-Options: DENY` o `frame-ancestors 'none'` en CSP y
+`Referrer-Policy: strict-origin-when-cross-origin` en el servidor.

@@ -5,11 +5,16 @@ import {
   getRefreshToken,
   saveRefreshedSession,
 } from './session'
+import { normalizeApiError } from './api-errors'
 
 export const SESSION_EXPIRED_EVENT = 'lms:session-expired'
 
+const baseURL = import.meta.env.DEV
+  ? '/api/v1/'
+  : import.meta.env.VITE_API_URL || '/api/v1/'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1/',
+  baseURL,
   timeout: 15000,
 })
 
@@ -79,7 +84,7 @@ api.interceptors.response.use(
       originalRequest._retry ||
       isAuthenticationRequest(originalRequest.url)
     ) {
-      return Promise.reject(error)
+      return Promise.reject(normalizeApiError(error))
     }
 
     originalRequest._retry = true
@@ -88,7 +93,7 @@ api.interceptors.response.use(
       originalRequest.headers.set('Authorization', `Bearer ${access}`)
       return api(originalRequest)
     } catch (refreshError) {
-      return Promise.reject(refreshError)
+      return Promise.reject(normalizeApiError(refreshError))
     }
   },
 )

@@ -1,33 +1,18 @@
-import axios from 'axios'
 import api from './api'
-import {
-  clearSession,
-  getAccessToken,
-  getRefreshToken,
-  saveSession,
-} from './session'
+import { clearSession, saveSession } from './session'
+import { ApiError, normalizeApiError } from './api-errors'
 
-function getServerErrorMessage(data) {
-  if (typeof data === 'string') return data
-  if (!data || typeof data !== 'object') return null
+function getUserFromResponse(data) {
+  const user = data?.datos
+  if (!user || typeof user !== 'object' || Array.isArray(user)) {
+    throw new ApiError('El servidor no devolvió un perfil válido.')
+  }
+  return user
+}
 
-  const errorData = data.error
-  const message =
-    data.detail ||
-    data.message ||
-    data.non_field_errors?.[0] ||
-    errorData?.detail ||
-    errorData?.non_field_errors?.[0] ||
-    (errorData && typeof errorData === 'object'
-      ? Object.values(errorData)
-          .flat()
-          .find((value) => typeof value === 'string')
-      : null) ||
-    Object.values(data)
-      .flat()
-      .find((value) => typeof value === 'string')
-
-  return typeof message === 'string' ? message : null
+export async function fetchCurrentUser() {
+  const { data } = await api.get('usuarios/me/')
+  return getUserFromResponse(data)
 }
 
 export async function loginWithCredentials(email, password) {
@@ -47,58 +32,32 @@ export async function loginWithCredentials(email, password) {
       typeof refresh !== 'string' ||
       !refresh
     ) {
-      throw new Error(
-        'La respuesta del servidor no contiene los tokens de sesión requeridos.',
-      )
+      throw new ApiError('El servidor no devolvió una sesión válida.')
     }
 
-    const returnedUser = payload?.usuario ?? payload?.user
-    const user =
-      returnedUser && typeof returnedUser === 'object' && !Array.isArray(returnedUser)
-        ? returnedUser
-        : { correo_institucional: email.trim() }
-
-    saveSession({ access: access, refresh: refresh, user })
-    return user
+    saveSession({ access, refresh })
+    return await fetchCurrentUser()
   } catch (error) {
     clearSession()
-    if (error instanceof Error && !axios.isAxiosError(error)) {
+    if (error instanceof ApiError && error.status === 403) {
       throw error
     }
-
-    if (axios.isAxiosError(error)) {
-      const serverMessage = getServerErrorMessage(error.response?.data)
-      if (serverMessage) {
-        throw new Error(serverMessage, { cause: error })
-      }
-      if (!error.response) {
-        throw new Error(
-          'No se pudo conectar con el servidor. Verifica que el backend esté activo.',
-          { cause: error },
-        )
-      }
-      if (error.response.status >= 500) {
-        throw new Error('El servidor tuvo un problema. Inténtalo más tarde.', {
-          cause: error,
-        })
-      }
+    if (
+      error instanceof ApiError &&
+      (error.status === 400 || error.status === 401)
+    ) {
+      throw new ApiError(
+        'No se pudo iniciar sesión. Verifica tus credenciales.',
+        error.status,
+      )
     }
-
-    throw new Error('No se pudo iniciar sesión. Inténtalo de nuevo.', {
-      cause: error,
-    })
+    throw normalizeApiError(error)
   }
 }
 
 export function logout() {
-  const refresh = getRefreshToken()
-  const access = getAccessToken()
-  if (!refresh || !access) {
-    clearSession()
-    return Promise.resolve()
-  }
-
-  return api
-    .post('usuarios/logout/', { refresh })
-    .finally(() => clearSession())
+  clearSession()
+  throw new ApiError(
+    'La sesión se cerró en este dispositivo; el servidor aún no ofrece revocación.',
+  )
 }
