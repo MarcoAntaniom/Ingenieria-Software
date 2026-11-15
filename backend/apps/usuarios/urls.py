@@ -1,8 +1,19 @@
 from django.urls import path
-from .views import *
+from .views import (
+    CustomTokenRefreshView,
+    LoginView,
+    LogoutView,
+    PerfilDocenteView,
+    PerfilEstudianteView,
+    PerfilView,
+    RolListView,
+    UsuarioView,
+)
 
 urlpatterns = [
     path('login/', view=LoginView.as_view(), name='login'),
+    path('logout/', view=LogoutView.as_view(), name='logout'),
+    path('roles/', view=RolListView.as_view(), name='roles_list'),
     path('me/', view=PerfilView.as_view(), name='perfil_me'),
     path('read/', view=UsuarioView.as_view(), name='read'),
     path('create/', view=UsuarioView.as_view(), name='create'),

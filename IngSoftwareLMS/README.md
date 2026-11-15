@@ -1,50 +1,54 @@
-# React + Vite
+# Campus Virtual LMS — Frontend (`IngSoftwareLMS`)
 
-## Campus Virtual LMS
+Frontend modular y escalable construido con **React 19**, **Vite 8**, **Tailwind CSS v4**, **TanStack React Query v5**, **Zustand v5** y **React Router v7**, integrado con el backend Django REST Framework + Channels (`../backend`).
 
-### Ejecutar el frontend
+## Arquitectura Feature-Based
 
-Desde esta carpeta, instala las dependencias con `npm install` y ejecuta `npm run dev`.
-En desarrollo, Vite reenvía las peticiones `/api/` a Django en `http://127.0.0.1:8000`.
-Para producción, define `VITE_API_URL` en `.env.local`, incluyendo el prefijo `/api/v1/`.
+```text
+src/
+├── app/
+│   ├── guards/
+│   │   └── RouteGuards.jsx          # GuestRoute, ProtectedRoute y RoleGuard (RBAC)
+│   └── layouts/
+│       └── AppLayout.jsx            # Shell compartido, navegación por rol y badge en vivo
+├── contexts/
+│   ├── AuthContext.jsx              # Sesión JWT, renovación silenciosa y sincronización /usuarios/me/
+│   └── auth-context.js
+├── features/
+│   ├── dashboard/                   # Resumen ejecutivo adaptado a Estudiante, Docente y Admin
+│   ├── academico/                   # Secciones, aula virtual por sección, inscripciones y catálogos
+│   ├── comunicacion/                # Anuncios por sección, foros/temas/hilos y mensajes directos cifrados
+│   ├── evaluaciones/                # Creación y seguimiento de tareas evaluadas
+│   ├── notificaciones/              # Bandeja REST + cliente WebSocket idempotente en tiempo real
+│   └── usuarios/                    # Perfil propio y administración de cuentas/perfiles
+├── services/
+│   ├── api.js                       # Cliente Axios con interceptores Bearer y refresh automático
+│   ├── auth.js                      # Login y cierre de sesión
+│   └── session.js                   # Almacenamiento de tokens y usuario
+└── shared/
+    ├── api/
+    │   └── wsClient.js              # Conexión WebSocket con reconexión exponencial y ping/pong
+    ├── components/ui/
+    │   └── StateViews.jsx           # PageHeader, LoadingState, ErrorState, EmptyState y Modal
+    └── lib/
+        ├── pagination.js            # Normalizador de respuestas DRF ({ results } y { datos })
+        ├── queryKeys.js             # Fábrica centralizada de claves de caché para React Query
+        └── roles.js                 # Normalización de roles (Estudiante, Docente, Administrador)
+```
 
-### Contrato de autenticación esperado
+## Ejecución local
 
-- `POST usuarios/login/` recibe `correo_institucional` y `password`.
-- La respuesta incluye `access`, `refresh` y `user`.
-- `POST usuarios/refresh/` recibe `refresh` y devuelve `access`; puede devolver un nuevo `refresh`.
-- Los endpoints protegidos usan el token de acceso en la cabecera `Authorization: Bearer`.
-
-El frontend renueva el acceso al cargar y ante respuestas `401`, mantiene el token de
-acceso en memoria y guarda el token de renovación en `sessionStorage`. La sesión termina
-al cerrar el navegador o cuando el servidor rechaza la renovación. El cierre de sesión
-elimina las credenciales locales; para revocar tokens en el servidor hace falta un
-endpoint de revocación.
-
-### Seguridad e integración pendiente
-
-El backend Django está en `../backend`; los pasos de instalación y arranque están en
-[`backend/README.md`](../backend/README.md). El panel obtiene sus cursos del endpoint
-autenticado `/api/v1/academico/cursos/`. El progreso no se inventa: queda como no
-disponible hasta que el modelo académico incluya datos de avance.
-
-Las rutas protegidas del frontend solo controlan la navegación: cada endpoint del
-backend debe autenticar al usuario y verificar en el servidor su rol, matrícula y
-permisos sobre cada curso, entrega y archivo. El refresh token se mantiene en
-`sessionStorage` durante esta integración con JWT; para producción, lo preferible es
-una cookie `HttpOnly`, `Secure` y `SameSite` con protección CSRF adecuada.
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Instala las dependencias:
+   ```sh
+   cd IngSoftwareLMS
+   npm install
+   ```
+2. Inicia el servidor de desarrollo:
+   ```sh
+   npm run dev
+   ```
+3. Variables de entorno opcionales (`.env.local`):
+   ```dotenv
+   VITE_API_URL=http://localhost:8000/api/v1/
+   VITE_WS_URL=ws://localhost:8000/ws/notificaciones/
+   ```
