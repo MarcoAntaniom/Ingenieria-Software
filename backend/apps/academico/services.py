@@ -42,10 +42,13 @@ def confirmar_envio_definitivo(entrega_id, estudiante):
     ahora = timezone.now()
     tarea = entrega.tarea
 
-    # Validar si superó la fecha límite oficial
+    # Validar si superó la fecha límite oficial (máximo 1 hora de espera en entrega tardía)
     if tarea.fecha_cierre and ahora > tarea.fecha_cierre:
         if not tarea.permite_atrasados:
             raise ValidationError("El plazo de entrega ha expirado y la tarea no acepta envíos fuera de plazo.")
+        limite_tardio = tarea.fecha_cierre + timezone.timedelta(hours=1)
+        if ahora > limite_tardio:
+            raise ValidationError("El tiempo máximo de espera para entregas tardías (1 hora) ha expirado y la entrega está bloqueada.")
         entrega.es_fuera_de_plazo = True
 
     # Cambiar estado y estampar el timestamp oficial

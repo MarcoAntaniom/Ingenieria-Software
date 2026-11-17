@@ -40,6 +40,7 @@ export const queryKeys = {
   archivos: {
     all: ['archivos'],
     list: (filters = {}) => ['archivos', 'list', filters],
+    materiales: (filters = {}) => ['archivos', 'materiales', filters],
     tipos: ['archivos', 'tipos'],
   },
   notificaciones: {

@@ -3,9 +3,12 @@ import { EmptyState, LoadingState } from '../../../shared/components/ui/StateVie
 
 export default function ForosExplorer({
   foros,
+  sections = [],
   isLoadingForos,
   selectedForoId,
   onSelectForo,
+  onCreateForo,
+  isCreatingForo = false,
   temas,
   selectedTemaId,
   onToggleTema,
@@ -15,23 +18,111 @@ export default function ForosExplorer({
   onReplyTema,
   isReplyingTema,
 }) {
+  const [nuevoForoSeccion, setNuevoForoSeccion] = useState('')
+  const [nuevoForoTitulo, setNuevoForoTitulo] = useState('')
+  const [nuevoForoDescripcion, setNuevoForoDescripcion] = useState('')
+  const [showNewForoForm, setShowNewForoForm] = useState(false)
+
   const [nuevoTemaTitulo, setNuevoTemaTitulo] = useState('')
   const [nuevoTemaContenido, setNuevoTemaContenido] = useState('')
   const [nuevoMensajeForo, setNuevoMensajeForo] = useState('')
 
+  const activeForoSeccion =
+    nuevoForoSeccion || (sections.length > 0 ? String(sections[0].id) : '')
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
       <div className="space-y-3 lg:col-span-4">
-        <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
-          1. Selecciona un Foro
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+            1. Foros de Secciones
+          </h2>
+          {onCreateForo && (
+            <button
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-[11px] font-bold text-white hover:bg-primary/90"
+              onClick={() => setShowNewForoForm((prev) => !prev)}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-sm">
+                {showNewForoForm ? 'close' : 'add_comment'}
+              </span>
+              {showNewForoForm ? 'Cerrar' : 'Crear foro'}
+            </button>
+          )}
+        </div>
+
+        {showNewForoForm && onCreateForo && (
+          <form
+            className="space-y-2.5 rounded-xl border border-primary/30 bg-card p-4 shadow-xs"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!activeForoSeccion) return
+              onCreateForo(
+                {
+                  seccion: Number(activeForoSeccion),
+                  titulo: nuevoForoTitulo.trim(),
+                  descripcion: nuevoForoDescripcion.trim(),
+                  activo: true,
+                },
+                () => {
+                  setNuevoForoTitulo('')
+                  setNuevoForoDescripcion('')
+                  setShowNewForoForm(false)
+                },
+              )
+            }}
+          >
+            <p className="text-xs font-extrabold text-ink">
+              Nuevo foro en una sección (Estudiantes y Docentes)
+            </p>
+            <select
+              className="w-full rounded-lg border border-line bg-subtle px-3 py-1.5 text-xs font-semibold text-ink"
+              onChange={(e) => setNuevoForoSeccion(e.target.value)}
+              required
+              value={activeForoSeccion}
+            >
+              {sections.length === 0 ? (
+                <option value="">Sin secciones disponibles</option>
+              ) : (
+                sections.map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.code} · {sec.title} (Sec. {sec.section})
+                  </option>
+                ))
+              )}
+            </select>
+            <input
+              className="w-full rounded-lg border border-line bg-subtle px-3 py-1.5 text-xs"
+              onChange={(e) => setNuevoForoTitulo(e.target.value)}
+              placeholder="Título del foro..."
+              required
+              value={nuevoForoTitulo}
+            />
+            <textarea
+              className="w-full rounded-lg border border-line bg-subtle px-3 py-1.5 text-xs"
+              onChange={(e) => setNuevoForoDescripcion(e.target.value)}
+              placeholder="Descripción del tema u objetivo..."
+              required
+              rows={2}
+              value={nuevoForoDescripcion}
+            />
+            <button
+              className="w-full rounded-lg bg-primary py-2 text-xs font-bold text-white disabled:opacity-50"
+              disabled={isCreatingForo || !activeForoSeccion}
+              type="submit"
+            >
+              {isCreatingForo ? 'Creando foro...' : 'Publicar foro en la sección'}
+            </button>
+          </form>
+        )}
+
         {isLoadingForos ? (
           <LoadingState label="Cargando foros..." />
         ) : foros.length === 0 ? (
           <EmptyState
             icon="forum"
             title="Sin foros creados"
-            description="Los docentes pueden abrir foros desde el detalle de cada sección."
+            description="Cualquier estudiante, docente o administrador puede crear un nuevo foro en una sección."
           />
         ) : (
           foros.map((foro) => (
@@ -57,6 +148,11 @@ export default function ForosExplorer({
               <p className="mt-1 line-clamp-2 text-xs text-muted">
                 {foro.descripcion}
               </p>
+              {foro.creado_por_nombre && (
+                <p className="mt-1.5 text-[10px] text-muted">
+                  Creado por: <strong>{foro.creado_por_nombre}</strong>
+                </p>
+              )}
             </button>
           ))
         )}

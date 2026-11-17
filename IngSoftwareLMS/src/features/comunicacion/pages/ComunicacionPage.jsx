@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { queryKeys } from '../../../shared/lib/queryKeys'
 import { extractApiError } from '../../../shared/lib/pagination'
 import { PageHeader } from '../../../shared/components/ui/StateViews'
+import { fetchSecciones } from '../../academico/api/academicoApi'
 import {
   createConversacion,
+  createForo,
   createMensajeForo,
   createTemaForo,
   fetchAnuncios,
@@ -22,12 +25,22 @@ import AnunciosWall from '../components/AnunciosWall'
 import DirectMessagesPanel from '../components/DirectMessagesPanel'
 
 export default function ComunicacionPage() {
+  const [searchParams] = useSearchParams()
+  const initialForoId = searchParams.get('foro')
+    ? Number(searchParams.get('foro'))
+    : null
+
   const [tab, setTab] = useState('foros')
-  const [selectedForoId, setSelectedForoId] = useState(null)
+  const [selectedForoId, setSelectedForoId] = useState(initialForoId)
   const [selectedTemaId, setSelectedTemaId] = useState(null)
   const [selectedConversacionId, setSelectedConversacionId] = useState(null)
 
   const queryClient = useQueryClient()
+
+  const seccionesQuery = useQuery({
+    queryKey: queryKeys.academico.secciones(),
+    queryFn: fetchSecciones,
+  })
 
   const forosQuery = useQuery({
     queryKey: queryKeys.comunicacion.foros(),
@@ -70,6 +83,18 @@ export default function ComunicacionPage() {
     queryKey: queryKeys.usuarios.all,
     queryFn: fetchUsuarios,
     enabled: tab === 'directos',
+  })
+
+  const crearForoMut = useMutation({
+    mutationFn: createForo,
+    onSuccess: (created) => {
+      toast.success('Foro creado exitosamente en la sección.')
+      queryClient.invalidateQueries({ queryKey: ['comunicacion', 'foros'] })
+      if (created?.id) {
+        setSelectedForoId(created.id)
+      }
+    },
+    onError: (err) => toast.error(extractApiError(err)),
   })
 
   const crearTemaMut = useMutation({
@@ -116,6 +141,7 @@ export default function ComunicacionPage() {
     onError: (err) => toast.error(extractApiError(err)),
   })
 
+  const sections = seccionesQuery.data?.items || []
   const foros = forosQuery.data || []
   const temas = temasQuery.data || []
   const mensajesTema = mensajesTemaQuery.data || []
@@ -128,7 +154,7 @@ export default function ComunicacionPage() {
       <PageHeader
         eyebrow="Comunidad Académica"
         title="Comunicación, Foros y Mensajería"
-        description="Participa en hilos de discusión por sección, consulta anuncios oficiales y envía mensajes directos cifrados."
+        description="Participa y crea foros de discusión por sección (habilitado para estudiantes, docentes y administradores), consulta anuncios oficiales y envía mensajes directos cifrados."
       />
 
       <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-6 px-6 py-6 lg:px-10">
@@ -167,10 +193,14 @@ export default function ComunicacionPage() {
         {tab === 'foros' && (
           <ForosExplorer
             foros={foros}
+            isCreatingForo={crearForoMut.isPending}
             isCreatingTema={crearTemaMut.isPending}
             isLoadingForos={forosQuery.isLoading}
             isReplyingTema={responderTemaMut.isPending}
             mensajesTema={mensajesTema}
+            onCreateForo={(payload, reset) =>
+              crearForoMut.mutate(payload, { onSuccess: reset })
+            }
             onCreateTema={(payload, reset) =>
               crearTemaMut.mutate(payload, { onSuccess: reset })
             }
@@ -184,6 +214,7 @@ export default function ComunicacionPage() {
             onToggleTema={(temaId) =>
               setSelectedTemaId((prev) => (prev === temaId ? null : temaId))
             }
+            sections={sections}
             selectedForoId={selectedForoId}
             selectedTemaId={selectedTemaId}
             temas={temas}

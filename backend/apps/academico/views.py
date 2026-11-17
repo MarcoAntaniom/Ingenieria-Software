@@ -249,6 +249,7 @@ class EntregaTareaViewSet(viewsets.ModelViewSet):
         # 2. Asumiendo que el estudiante pertenece a secciones inscritas, 
         # filtramos las tareas de sus secciones que NO están en la lista de enviadas.
         # (Ajusta el filtro de secciones según cómo tengas relacionada la inscripción)
+        from django.db.models import Q
         from .models import Tarea, Inscripcion
         
         secciones_estudiante = Inscripcion.objects.filter(
@@ -257,7 +258,7 @@ class EntregaTareaViewSet(viewsets.ModelViewSet):
 
         # Tareas de las secciones del alumno que no han sido enviadas definitivamente
         tareas_pendientes = Tarea.objects.filter(
-            fecha_cierre__gte=timezone.now()
+            Q(fecha_cierre__gte=timezone.now()) | Q(fecha_cierre__isnull=True)
         ).exclude(
             id__in=tareas_enviadas_ids
         ).distinct()

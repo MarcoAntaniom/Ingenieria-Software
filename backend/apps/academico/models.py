@@ -156,7 +156,7 @@ class AnuncioAcademico(models.Model):
 class Tarea(models.Model):
     titulo = models.CharField(max_length=200, verbose_name="Título de la Tarea")
     descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción")
-    fecha_cierre = models.DateTimeField(verbose_name="Fecha límite oficial")
+    fecha_cierre = models.DateTimeField(blank=True, null=True, verbose_name="Fecha límite oficial")
     permite_atrasados = models.BooleanField(default=False, verbose_name="¿Permite entregas fuera de plazo?")
 
     aplica_penalizacion_atraso = models.BooleanField(default=False, verbose_name="¿Aplica penalización del 1% por hora?")
@@ -228,6 +228,9 @@ class EntregaTarea(models.Model):
             if ahora > self.tarea.fecha_cierre:
                 if not self.tarea.permite_atrasados:
                     raise ValueError("El plazo de entrega ha expirado y esta tarea no acepta envíos fuera de plazo.")
+                limite_tardio = self.tarea.fecha_cierre + timezone.timedelta(hours=1)
+                if ahora > limite_tardio:
+                    raise ValueError("El tiempo máximo de espera para entregas tardías (1 hora) ha expirado y la entrega está bloqueada.")
                 self.es_fuera_de_plazo = True
             else:
                 self.es_fuera_de_plazo = False

@@ -19,19 +19,25 @@ import {
   fetchForos,
 } from '../../comunicacion/api/comunicacionApi'
 import { fetchEvaluacionTareas } from '../../evaluaciones/api/evaluacionesApi'
+import {
+  deleteArchivo,
+  fetchMaterialesEstudio,
+} from '../../archivos/api/archivosApi'
 import SectionAnnouncementsTab from '../components/SectionAnnouncementsTab'
 import SectionForumsTab from '../components/SectionForumsTab'
 import SectionTasksTab from '../components/SectionTasksTab'
+import SectionMaterialsTab from '../components/SectionMaterialsTab'
 
 export default function CursoDetallePage() {
   const { seccionId } = useParams()
   const numericSeccionId = Number(seccionId)
-  const [activeTab, setActiveTab] = useState('anuncios')
+  const [activeTab, setActiveTab] = useState('tareas')
 
   const { user } = useAuth()
   const roleCode = getUserRoleCode(user)
   const canManageSection =
     roleCode === ROLES.DOCENTE || roleCode === ROLES.ADMIN
+  const isStudent = roleCode === ROLES.ESTUDIANTE
   const queryClient = useQueryClient()
 
   const seccionQuery = useQuery({
@@ -54,6 +60,11 @@ export default function CursoDetallePage() {
     queryFn: () => fetchEvaluacionTareas({ seccion: numericSeccionId }),
   })
 
+  const materialesQuery = useQuery({
+    queryKey: queryKeys.archivos.materiales({ seccion: numericSeccionId }),
+    queryFn: () => fetchMaterialesEstudio({ seccion: numericSeccionId }),
+  })
+
   const createAnuncioMutation = useMutation({
     mutationFn: createAnuncio,
     onSuccess: () => {
@@ -73,6 +84,17 @@ export default function CursoDetallePage() {
     },
     onError: (err) => {
       toast.error(extractApiError(err, 'No se pudo crear el foro.'))
+    },
+  })
+
+  const deleteMaterialMutation = useMutation({
+    mutationFn: deleteArchivo,
+    onSuccess: () => {
+      toast.success('Material eliminado correctamente.')
+      queryClient.invalidateQueries({ queryKey: queryKeys.archivos.all })
+    },
+    onError: (err) => {
+      toast.error(extractApiError(err, 'No se pudo eliminar el material.'))
     },
   })
 
@@ -99,9 +121,18 @@ export default function CursoDetallePage() {
   }
 
   const course = seccionQuery.data
-  const sectionAnuncios = anunciosQuery.data || []
-  const sectionForos = forosQuery.data || []
-  const sectionTareas = tareasQuery.data || []
+  const sectionAnuncios = (anunciosQuery.data || []).filter(
+    (anuncio) => Number(anuncio.seccion) === numericSeccionId,
+  )
+  const sectionForos = (forosQuery.data || []).filter(
+    (foro) => Number(foro.seccion) === numericSeccionId,
+  )
+  const sectionTareas = (tareasQuery.data || []).filter(
+    (task) => Number(task.seccion) === numericSeccionId,
+  )
+  const sectionMateriales = (materialesQuery.data || []).filter(
+    (material) => Number(material.seccion_id) === numericSeccionId,
+  )
 
   return (
     <div className="flex flex-col">
@@ -125,6 +156,16 @@ export default function CursoDetallePage() {
         <div className="flex flex-wrap gap-2 rounded-xl border border-line bg-card p-2 shadow-xs">
           {[
             {
+              id: 'tareas',
+              label: `Tareas de la Sección (${sectionTareas.length})`,
+              icon: 'assignment',
+            },
+            {
+              id: 'materiales',
+              label: `Materiales de Estudio (${sectionMateriales.length})`,
+              icon: 'menu_book',
+            },
+            {
               id: 'anuncios',
               label: `Anuncios (${sectionAnuncios.length})`,
               icon: 'campaign',
@@ -133,11 +174,6 @@ export default function CursoDetallePage() {
               id: 'foros',
               label: `Foros de Debate (${sectionForos.length})`,
               icon: 'forum',
-            },
-            {
-              id: 'tareas',
-              label: `Tareas Evaluadas (${sectionTareas.length})`,
-              icon: 'assignment',
             },
           ].map((t) => (
             <button
@@ -157,6 +193,27 @@ export default function CursoDetallePage() {
             </button>
           ))}
         </div>
+
+        {activeTab === 'tareas' && (
+          <SectionTasksTab
+            canManageSection={canManageSection}
+            isLoadingTasks={tareasQuery.isLoading}
+            isStudent={isStudent}
+            seccionId={numericSeccionId}
+            tasks={sectionTareas}
+          />
+        )}
+
+        {activeTab === 'materiales' && (
+          <SectionMaterialsTab
+            canManageSection={canManageSection}
+            isDeleting={deleteMaterialMutation.isPending}
+            isLoading={materialesQuery.isLoading}
+            materials={sectionMateriales}
+            onDeleteMaterial={(id) => deleteMaterialMutation.mutate(id)}
+            seccionId={numericSeccionId}
+          />
+        )}
 
         {activeTab === 'anuncios' && (
           <SectionAnnouncementsTab
@@ -185,8 +242,6 @@ export default function CursoDetallePage() {
             }
           />
         )}
-
-        {activeTab === 'tareas' && <SectionTasksTab tasks={sectionTareas} />}
       </div>
     </div>
   )

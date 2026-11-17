@@ -16,9 +16,29 @@ export async function fetchArchivos(filters = {}) {
   return unwrapListResponse(data).items
 }
 
+export async function fetchMaterialesEstudio(filters = {}) {
+  const params = {}
+  if (filters.seccion) params.seccion = filters.seccion
+  const { data } = await api.get('archivos/materiales/', { params })
+  return unwrapListResponse(data).items
+}
+
 export async function fetchTiposArchivo() {
   const { data } = await api.get('archivos/tipos/')
   return unwrapListResponse(data).items
+}
+
+function normalizeUploadedRecords(data) {
+  if (Array.isArray(data?.archivos)) {
+    return data.archivos
+  }
+  if (Array.isArray(data?.datos)) {
+    return data.datos
+  }
+  if (data?.datos && typeof data.datos === 'object') {
+    return [data.datos]
+  }
+  return []
 }
 
 /**
@@ -42,16 +62,40 @@ export async function uploadArchivos(files, onProgress) {
     },
   })
 
-  if (Array.isArray(data?.archivos)) {
-    return data.archivos
+  return normalizeUploadedRecords(data)
+}
+
+/**
+ * Sube materiales de estudio (solo permitido para Docentes y Administradores).
+ */
+export async function uploadMaterialEstudio(
+  { files, seccion, titulo },
+  onProgress,
+) {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('archivos', file)
   }
-  if (Array.isArray(data?.datos)) {
-    return data.datos
+  if (seccion) {
+    formData.append('seccion', String(seccion))
   }
-  if (data?.datos && typeof data.datos === 'object') {
-    return [data.datos]
+  if (titulo && titulo.trim()) {
+    formData.append('titulo', titulo.trim())
   }
-  return []
+
+  const { data } = await api.post('archivos/materiales/', formData, {
+    timeout: 60000,
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total && onProgress) {
+        const percent = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total,
+        )
+        onProgress(percent)
+      }
+    },
+  })
+
+  return normalizeUploadedRecords(data)
 }
 
 export async function deleteArchivo(id) {

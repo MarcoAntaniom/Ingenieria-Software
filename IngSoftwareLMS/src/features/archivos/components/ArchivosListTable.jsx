@@ -9,6 +9,9 @@ export default function ArchivosListTable({
   isLoading,
   onDelete,
   isDeleting,
+  canDelete = false,
+  emptyTitle = 'Aún no hay archivos en este listado',
+  emptyDescription = 'Los documentos y materiales publicados aparecerán aquí.',
 }) {
   if (isLoading) {
     return <LoadingState label="Cargando repositorio de archivos..." />
@@ -18,8 +21,8 @@ export default function ArchivosListTable({
     return (
       <EmptyState
         icon="folder_off"
-        title="Aún no hay archivos en el repositorio"
-        description="Arrastra y suelta documentos en el recuadro superior para subirlos al almacenamiento."
+        title={emptyTitle}
+        description={emptyDescription}
       />
     )
   }
@@ -30,6 +33,7 @@ export default function ArchivosListTable({
         <thead className="border-b border-line bg-subtle text-[11px] font-bold uppercase text-muted">
           <tr>
             <th className="px-4 py-3">Archivo</th>
+            <th className="px-4 py-3">Categoría</th>
             <th className="px-4 py-3">Formato</th>
             <th className="px-4 py-3">Tamaño</th>
             <th className="px-4 py-3">Subido por</th>
@@ -46,7 +50,7 @@ export default function ArchivosListTable({
                     className="material-symbols-outlined text-lg text-primary"
                     aria-hidden="true"
                   >
-                    description
+                    {archivo.es_material ? 'menu_book' : 'description'}
                   </span>
                   <a
                     className="font-bold text-primary hover:underline"
@@ -57,6 +61,18 @@ export default function ArchivosListTable({
                     {archivo.nombre_original}
                   </a>
                 </div>
+              </td>
+              <td className="px-4 py-3">
+                {archivo.es_material ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    Material de Estudio
+                    {archivo.seccion_id ? ` · Sec #${archivo.seccion_id}` : ''}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-subtle px-2 py-0.5 text-[10px] font-bold text-muted">
+                    Archivo / Entrega
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3">
                 <span className="rounded bg-subtle px-2 py-0.5 text-[10px] font-bold uppercase text-secondary">
@@ -82,16 +98,18 @@ export default function ArchivosListTable({
                     rel="noreferrer"
                     target="_blank"
                   >
-                    Abrir
+                    Descargar / Abrir
                   </a>
-                  <button
-                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-danger hover:bg-rose-100 disabled:opacity-50"
-                    disabled={isDeleting}
-                    onClick={() => onDelete(archivo.id)}
-                    type="button"
-                  >
-                    Eliminar
-                  </button>
+                  {canDelete && onDelete && (
+                    <button
+                      className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-danger hover:bg-rose-100 disabled:opacity-50"
+                      disabled={isDeleting}
+                      onClick={() => onDelete(archivo.id)}
+                      type="button"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>

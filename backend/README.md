@@ -75,13 +75,15 @@ Rutas bajo `/api/v1/usuarios/`:
 | Ruta | Función |
 |---|---|
 | `POST login/` | Valida correo y contraseña; responde con tokens de acceso/refresh y usuario. |
+| `POST logout/` | Cierra la sesión activa del usuario. |
 | `POST refresh/` | Renueva tokens a partir de un refresh token. |
+| `GET roles/` | Lista el catálogo de roles del sistema (`Administrador`, `Docente`, `Estudiante`). |
 | `GET me/` | Devuelve el perfil del usuario autenticado. |
 | `GET read/` | Lista usuarios. |
 | `POST create/` | Crea un usuario; el serializador almacena la contraseña con el hash de Django. |
 | `PUT update/<id>/` | Actualiza parcialmente un usuario. |
-| `POST student-profile/` | Crea el perfil de estudiante; la vista comprueba el rol con ID `1`. |
-| `POST teacher-profile/` | Crea el perfil docente; la vista comprueba el rol con ID `1`. |
+| `GET, POST student-profile/` | Lista o crea perfiles de estudiante (creación restringida a rol administrador). |
+| `GET, POST teacher-profile/` | Lista o crea perfiles docentes (creación restringida a rol administrador). |
 
 ### `academico`
 
@@ -109,15 +111,27 @@ de esta app no está incluido en `academico/urls.py`.
 
 ### `evaluaciones`
 
-Contiene rúbricas, criterios y niveles, tareas, entregas calificadas, criterios
-de evaluación, evaluaciones e intentos. Su ruta actualmente registrada es:
+Gestiona el ciclo completo de tareas evaluadas por sección, rúbricas dinámicas
+con criterios y niveles, entregas estudiantiles (en estado `BORRADOR`,
+`ENVIADA`, `EN_REVISION`, `REABIERTA` y `CALIFICADA`), comprobantes digitales y
+calificaciones en escala chilena (`1.0` a `7.0`).
 
-| Ruta | Función |
+Rutas registradas bajo `/api/v1/evaluaciones/`:
+
+| Método y ruta | Función |
 |---|---|
-| `POST /api/v1/evaluaciones/create/` | Valida y crea una tarea del modelo `evaluaciones.Tarea`. |
+| `GET, POST tareas/` (y `POST create/`) | Lista tareas (filtrables por `?seccion=<id>`) y permite a docentes/administradores publicar nuevas tareas con **fecha de término opcional** (`fecha_limite` nullable) y validación contra fechas pasadas. |
+| `GET, POST rubricas/` | Lista y crea rúbricas dinámicas con criterios ponderados y niveles de logro (`7.0`, `4.0`, `1.0`). |
+| `GET, POST entregas/` | Lista entregas (aisladas estrictamente por estudiante según Ley 19.628) y permite guardar avances en `BORRADOR` o enviar de forma definitiva (`ENVIADA`). |
+| `POST entregas/<id>/confirmar-envio/` | Confirma el envío definitivo de un borrador o entrega reabierta, bloqueando ediciones posteriores y emitiendo el comprobante digital (`#COMP-XXXXX`). |
+| `POST entregas/<id>/en-revision/` | Transiciona el estado de la entrega a `EN_REVISION` cuando el docente abre o evalúa los archivos del estudiante. |
+| `POST entregas/<id>/reabrir/` | Permite al docente reabrir el plazo de entrega (`REABIERTA`) a un estudiante específico para habilitarle un nuevo intento. |
+| `POST entregas/<id>/calificar/` | Registra la calificación en escala `1.0` a `7.0`, determina el estado conceptual (`APROBADO` $\ge 4.0$ / `REPROBADO` $< 4.0$), aplica el **descuento automático del 1%** si fue entregada en la ventana tardía (salvo exención docente `eximir_penalizacion`), guarda la evaluación por criterios de rúbrica y adjunta archivos corregidos de retroalimentación. |
 
-El módulo incluye funciones para iniciar intentos y validaciones de fecha y
-límite de intentos. No todas las clases de modelo tienen endpoints HTTP propios.
+**Regla de negocio de plazo y entregas tardías:**
+- Si la tarea no tiene `fecha_limite`, permanece abierta sin bloqueo por fecha.
+- Si tiene `fecha_limite` y `permitir_entregas_tardias=False`, se bloquea inmediatamente al cumplirse la fecha límite.
+- Si tiene `permitir_entregas_tardias=True`, permite como **máximo 1 hora de espera** tras `fecha_limite` (`MAX_ESPERA_ENTREGA_TARDIA = timedelta(hours=1)`). Una vez transcurrida esa hora, se bloquea cualquier subida, guardado de borrador o confirmación de envío.
 
 ### `comunicacion`
 
@@ -127,22 +141,32 @@ Los ViewSets REST están registrados bajo `/api/v1/comunicacion/`:
 | Recurso | Ruta base |
 |---|---|
 | Anuncios | `anuncios/` |
-| Foros | `foros/` |
-| Temas | `temas/` |
+| Foros | `foros/` (incluye acción `foros/<id>/temas/`) |
+| Temas | `temas/` (incluye acción `temas/<id>/mensajes/`) |
 | Mensajes de foro | `mensajes-foro/` |
+| Conversaciones | `conversaciones/` |
 | Mensajes directos | `mensajes-directos/` |
 
 Los mensajes directos se validan para que el remitente participe en la
-conversación y se cifran antes de guardarse; el serializador los descifra para
-su lectura. La app también relaciona anuncios con archivos.
+conversación y se cifran con `Fernet` (derivación PBKDF2-HMAC-SHA256) antes de
+guardarse; el serializador los descifra automáticamente para su lectura. La app
+también relaciona anuncios con archivos adjuntos.
 
 ### `archivos`
 
 Define el catálogo `TipoArchivo` y los metadatos de `Archivo`, con referencia al
-usuario que lo subió, formato, tamaño, nombre y URL pública. `settings.py`
-configura `django-storages` con un backend S3 compatible y endpoint de
-Cloudflare R2. La app no tiene actualmente rutas HTTP propias; otras apps
-referencian sus modelos para asociar archivos a entregas y anuncios.
+usuario que lo subió, formato, tamaño (máximo **50 MB**), nombre y URL pública.
+`settings.py` configura `django-storages` con el endpoint S3 de **Cloudflare R2**
+(con respaldo en almacenamiento local cuando `DEBUG=True`).
+
+Rutas registradas bajo `/api/v1/archivos/`:
+
+| Método y ruta | Función |
+|---|---|
+| `GET, POST /` | Lista archivos subidos y permite subir uno o varios archivos validando extensión permitida y peso máximo de 50 MB. |
+| `GET, POST materiales/` | Lista materiales de estudio por sección (`?seccion=<id>`) y permite exclusivamente a docentes y administradores publicar materiales asignados obligatoriamente a una sección (`materiales/seccion_<id>/`). |
+| `DELETE <id>/` | Elimina un archivo (restringido exclusivamente al docente autor o administrador; los estudiantes tienen prohibido eliminar archivos subidos). |
+| `GET tipos/` | Lista los tipos de archivo y límites de tamaño registrados. |
 
 ### `notificaciones`
 
@@ -242,10 +266,11 @@ Las rutas raíz están definidas en `config/urls.py`:
 | Prefijo | Aplicación |
 |---|---|
 | `/admin/` | Administración de Django. |
-| `/api/v1/usuarios/` | Usuarios, inicio de sesión y perfiles. |
-| `/api/v1/academico/` | Catálogos e inscripciones académicas. |
-| `/api/v1/evaluaciones/` | Tareas y evaluaciones. |
-| `/api/v1/comunicacion/` | Anuncios, foros y mensajería. |
+| `/api/v1/usuarios/` | Usuarios, inicio de sesión, roles y perfiles. |
+| `/api/v1/academico/` | Catálogos, secciones e inscripciones académicas. |
+| `/api/v1/evaluaciones/` | Tareas, rúbricas, entregas, comprobantes y calificaciones. |
+| `/api/v1/comunicacion/` | Anuncios, foros, conversaciones y mensajería directa cifrada. |
+| `/api/v1/archivos/` | Subida general de archivos, materiales de estudio por sección y tipos permitidos. |
 | `/api/v1/notificaciones/` | Historial, catálogo y estado de notificaciones. |
 | `/ws/notificaciones/` | Notificaciones en tiempo real por WebSocket. |
 

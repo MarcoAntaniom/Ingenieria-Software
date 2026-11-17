@@ -1,5 +1,8 @@
+import re
 from rest_framework import serializers
 from .models import Archivo, TipoArchivo
+
+SECCION_PREFIX_RE = re.compile(r'^materiales/seccion_(\d+)/')
 
 
 class TipoArchivoSerializer(serializers.ModelSerializer):
@@ -11,6 +14,8 @@ class TipoArchivoSerializer(serializers.ModelSerializer):
 class ArchivoSerializer(serializers.ModelSerializer):
     tipo_archivo = TipoArchivoSerializer(read_only=True)
     subido_por_nombre = serializers.SerializerMethodField()
+    es_material = serializers.SerializerMethodField()
+    seccion_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Archivo
@@ -24,6 +29,8 @@ class ArchivoSerializer(serializers.ModelSerializer):
             'url_publica',
             'peso_bytes',
             'creado_en',
+            'es_material',
+            'seccion_id',
         ]
         read_only_fields = fields
 
@@ -31,3 +38,12 @@ class ArchivoSerializer(serializers.ModelSerializer):
         if obj.subido_por_id:
             return f"{obj.subido_por.nombres} {obj.subido_por.apellidos}".strip()
         return ""
+
+    def get_es_material(self, obj):
+        return bool(obj.nombre_almacenamiento and obj.nombre_almacenamiento.startswith('materiales/'))
+
+    def get_seccion_id(self, obj):
+        if not obj.nombre_almacenamiento:
+            return None
+        match = SECCION_PREFIX_RE.match(obj.nombre_almacenamiento)
+        return int(match.group(1)) if match else None

@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { toast } from 'sonner'
+import { useAuth } from '../../../contexts/auth-context'
 import { extractApiError } from '../../lib/pagination'
+import { getUserRoleCode, ROLES } from '../../lib/roles'
 import {
   formatFileSize,
   uploadArchivos,
@@ -25,17 +27,25 @@ const DEFAULT_ACCEPT = {
  * Componente Drag & Drop reutilizable basado en `react-dropzone`.
  * Permite arrastrar y soltar archivos en la página, los sube al backend con barra de progreso
  * y entrega la lista de objetos `Archivo` subidos al componente padre.
+ * Los estudiantes no pueden eliminar archivos ya subidos.
  */
 export default function FileDropzoneUploader({
   uploadedFiles = [],
   onChangeUploadedFiles,
   onUploadComplete,
+  customUploadFn,
+  allowRemove,
   multiple = true,
   maxSizeMB = 50,
   label = 'Arrastra y suelta tus archivos aquí, o haz clic para seleccionarlos',
   helperText = 'Formatos admitidos: PDF, DOCX, ZIP, XLSX, PPTX, PNG, JPG (máx. 50 MB)',
   compact = false,
 }) {
+  const { user } = useAuth()
+  const roleCode = getUserRoleCode(user)
+  const isStudent = roleCode === ROLES.ESTUDIANTE
+  const canRemoveFiles = allowRemove !== undefined ? allowRemove && !isStudent : !isStudent
+
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
 
@@ -55,7 +65,8 @@ export default function FileDropzoneUploader({
       setProgress(5)
 
       try {
-        const createdRecords = await uploadArchivos(acceptedFiles, (pct) => {
+        const uploader = customUploadFn || uploadArchivos
+        const createdRecords = await uploader(acceptedFiles, (pct) => {
           setProgress(pct)
         })
 
@@ -78,6 +89,7 @@ export default function FileDropzoneUploader({
       }
     },
     [
+      customUploadFn,
       maxSizeMB,
       multiple,
       onChangeUploadedFiles,
@@ -101,7 +113,7 @@ export default function FileDropzoneUploader({
   })
 
   function handleRemoveUploaded(id) {
-    if (!onChangeUploadedFiles) return
+    if (!canRemoveFiles || !onChangeUploadedFiles) return
     onChangeUploadedFiles(uploadedFiles.filter((item) => item.id !== id))
   }
 
@@ -168,9 +180,17 @@ export default function FileDropzoneUploader({
 
       {uploadedFiles.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
-            Archivos adjuntos listos ({uploadedFiles.length})
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
+              Archivos subidos ({uploadedFiles.length})
+            </p>
+            {isStudent && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700">
+                <span className="material-symbols-outlined text-xs">lock</span>
+                Los archivos subidos por estudiantes no pueden eliminarse
+              </span>
+            )}
+          </div>
           <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
             {uploadedFiles.map((file) => (
               <div
@@ -198,7 +218,7 @@ export default function FileDropzoneUploader({
                     </span>
                   </div>
                 </div>
-                {onChangeUploadedFiles && (
+                {canRemoveFiles && onChangeUploadedFiles && (
                   <button
                     aria-label={`Quitar ${file.nombre_original}`}
                     className="rounded-lg p-1 text-muted hover:bg-rose-50 hover:text-danger"
