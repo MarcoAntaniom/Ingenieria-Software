@@ -94,28 +94,108 @@ class AsignaturaDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 
+def _es_admin(usuario):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return False
+    rol = getattr(usuario, 'rol', None)
+    if getattr(rol, 'id', None) == 1:
+        return True
+    codigo = (getattr(rol, 'codigo', '') or '').strip().lower()
+    nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
+    return codigo in ('admin', 'adm', 'administrador') or 'admin' in codigo or 'admin' in nombre
+
+
+def _es_docente(usuario):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return False
+    if hasattr(usuario, 'perfil_docente'):
+        return True
+    rol = getattr(usuario, 'rol', None)
+    codigo = (getattr(rol, 'codigo', '') or '').strip().lower()
+    nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
+    return any(k in codigo or k in nombre for k in ('docente', 'profesor', 'teacher')) or codigo == 'doc'
+
+
+def _filtrar_secciones_por_usuario(qs, usuario):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return qs.none()
+
+    if _es_admin(usuario):
+        return qs
+
+    if _es_docente(usuario):
+        if hasattr(usuario, 'perfil_docente'):
+            return qs.filter(docentes_asignados__docente=usuario.perfil_docente).distinct()
+        return qs.none()
+
+    if hasattr(usuario, 'perfil_estudiante'):
+        return qs.filter(inscripciones__estudiante=usuario.perfil_estudiante).distinct()
+
+    return qs.none()
+
+
 class SeccionListCreateView(generics.ListCreateAPIView):
-    queryset = Seccion.objects.select_related('asignatura', 'periodo_academico').all().order_by('id')
     serializer_class = SeccionSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Seccion.objects.select_related('asignatura', 'periodo_academico').all().order_by('id')
+        return _filtrar_secciones_por_usuario(qs, self.request.user)
+
+    def perform_create(self, serializer):
+        seccion = serializer.save()
+        usuario = self.request.user
+        if not _es_admin(usuario) and hasattr(usuario, 'perfil_docente'):
+            SeccionDocente.objects.get_or_create(
+                seccion=seccion,
+                docente=usuario.perfil_docente,
+                defaults={'es_titular': True},
+            )
 
 
 class SeccionDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Seccion.objects.select_related('asignatura', 'periodo_academico').all()
     serializer_class = SeccionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        qs = Seccion.objects.select_related('asignatura', 'periodo_academico').all()
+        return _filtrar_secciones_por_usuario(qs, self.request.user)
+
 
 class SeccionDocenteListCreateView(generics.ListCreateAPIView):
-    queryset = SeccionDocente.objects.select_related('seccion', 'docente').all().order_by('id')
     serializer_class = SeccionDocenteSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = SeccionDocente.objects.select_related('seccion', 'docente').all().order_by('id')
+        usuario = self.request.user
+        if _es_admin(usuario):
+            return qs
+        if _es_docente(usuario):
+            if hasattr(usuario, 'perfil_docente'):
+                return qs.filter(docente=usuario.perfil_docente)
+            return qs.none()
+        if hasattr(usuario, 'perfil_estudiante'):
+            return qs.filter(seccion__inscripciones__estudiante=usuario.perfil_estudiante).distinct()
+        return qs.none()
 
 
 class SeccionDocenteDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = SeccionDocente.objects.select_related('seccion', 'docente').all()
     serializer_class = SeccionDocenteSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = SeccionDocente.objects.select_related('seccion', 'docente').all()
+        usuario = self.request.user
+        if _es_admin(usuario):
+            return qs
+        if _es_docente(usuario):
+            if hasattr(usuario, 'perfil_docente'):
+                return qs.filter(docente=usuario.perfil_docente)
+            return qs.none()
+        if hasattr(usuario, 'perfil_estudiante'):
+            return qs.filter(seccion__inscripciones__estudiante=usuario.perfil_estudiante).distinct()
+        return qs.none()
 
 
 class InscripcionListCreateView(generics.ListCreateAPIView):

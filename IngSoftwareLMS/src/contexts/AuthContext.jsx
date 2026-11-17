@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { AuthContext } from './auth-context'
 import { refreshAccessToken, SESSION_EXPIRED_EVENT } from '../services/api'
 import {
@@ -14,6 +15,7 @@ import {
 import { fetchCurrentUserProfile } from '../features/usuarios/api/usuariosApi'
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState(() => getStoredUser())
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isInitializing, setIsInitializing] = useState(() =>
@@ -24,6 +26,7 @@ export function AuthProvider({ children }) {
     let active = true
 
     function handleSessionExpired() {
+      queryClient.clear()
       setIsAuthenticated(false)
       setUser(null)
       setIsInitializing(false)
@@ -69,9 +72,10 @@ export function AuthProvider({ children }) {
       active = false
       window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
     }
-  }, [])
+  }, [queryClient])
 
   async function login(email, password) {
+    queryClient.clear()
     const authenticatedUser = await loginWithCredentials(email, password)
     setUser(authenticatedUser)
     setIsAuthenticated(true)
@@ -94,6 +98,7 @@ export function AuthProvider({ children }) {
     try {
       await revokeLoginSession()
     } finally {
+      queryClient.clear()
       setUser(null)
       setIsAuthenticated(false)
     }
