@@ -61,15 +61,22 @@ class AnuncioSerializer(serializers.ModelSerializer):
         return ''
 
     def get_archivos_adjuntos(self, obj):
-        relaciones = obj.archivos.select_related('archivo').all()
+        request = self.context.get('request')
+        relaciones = obj.archivos.select_related('archivo__tipo_archivo').all()
         return [
             {
                 'id': rel.archivo.id,
                 'nombre_original': rel.archivo.nombre_original,
                 'url_publica': obtener_url_archivo(
-                    rel.archivo, request=self.context.get('request')
+                    rel.archivo, request=request, download=False
+                ),
+                'url_descarga': obtener_url_archivo(
+                    rel.archivo, request=request, download=True
                 ),
                 'peso_bytes': rel.archivo.peso_bytes,
+                'extension': getattr(getattr(rel.archivo, 'tipo_archivo', None), 'extension', None),
+                'mime_type': getattr(getattr(rel.archivo, 'tipo_archivo', None), 'mime_type', None),
+                'creado_en': rel.archivo.creado_en,
             }
             for rel in relaciones
             if rel.archivo_id

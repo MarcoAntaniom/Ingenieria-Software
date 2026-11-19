@@ -1,5 +1,5 @@
 import { EmptyState, LoadingState } from '../../../shared/components/ui/StateViews'
-import { formatFileSize } from '../../archivos/api/archivosApi'
+import ArchivoAttachmentList from '../../archivos/components/ArchivoAttachmentList'
 
 export default function AnunciosWall({ anuncios, isLoading }) {
   if (isLoading) {
@@ -41,24 +41,8 @@ export default function AnunciosWall({ anuncios, isLoading }) {
           </p>
 
           {anuncio.archivos_adjuntos?.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {anuncio.archivos_adjuntos.map((file) => (
-                <a
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-subtle"
-                  href={file.url_publica}
-                  key={file.id}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <span className="material-symbols-outlined text-base text-secondary">
-                    attach_file
-                  </span>
-                  <span>{file.nombre_original}</span>
-                  <span className="text-[10px] font-normal text-muted">
-                    ({formatFileSize(file.peso_bytes)})
-                  </span>
-                </a>
-              ))}
+            <div className="mt-3">
+              <ArchivoAttachmentList files={anuncio.archivos_adjuntos} />
             </div>
           )}
 

@@ -53,9 +53,11 @@ export default function ArchivosPage() {
     enabled: Boolean(activeSeccionId),
   })
 
+  const effectiveSoloMios = !canManageMaterials ? true : soloMios
+
   const archivosQuery = useQuery({
-    queryKey: queryKeys.archivos.list({ mios: soloMios }),
-    queryFn: () => fetchArchivos({ mios: soloMios }),
+    queryKey: queryKeys.archivos.list({ mios: effectiveSoloMios }),
+    queryFn: () => fetchArchivos({ mios: effectiveSoloMios }),
   })
 
   const deleteMutation = useMutation({
@@ -94,7 +96,7 @@ export default function ArchivosPage() {
                 Permisos de Estudiante en Archivos y Materiales
               </p>
               <p className="text-[11px] text-amber-900">
-                Solo los docentes y administradores pueden publicar materiales de estudio en una sección o eliminar archivos. Los archivos que subas en tus entregas quedan resguardados y no pueden ser borrados.
+                Puedes <strong>ver y descargar</strong> todos los archivos que hayas subido en tus entregas y los materiales de estudio de tus secciones. Solo docentes y administradores pueden publicar nuevos materiales o eliminar archivos.
               </p>
             </div>
           </div>
@@ -128,7 +130,9 @@ export default function ArchivosPage() {
               <span className="material-symbols-outlined text-base">
                 folder_open
               </span>
-              Repositorio de Entregas ({archivos.length})
+              {canManageMaterials
+                ? `Repositorio de Entregas (${archivos.length})`
+                : `Mis Archivos Subidos (${archivos.length})`}
             </button>
           </div>
 
@@ -154,30 +158,32 @@ export default function ArchivosPage() {
               </select>
             </div>
           ) : (
-            <div className="flex gap-2 rounded-xl border border-line bg-card p-1.5 shadow-xs">
-              <button
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
-                  !soloMios
-                    ? 'bg-primary text-white'
-                    : 'text-muted hover:bg-subtle'
-                }`}
-                onClick={() => setSoloMios(false)}
-                type="button"
-              >
-                Todos los archivos
-              </button>
-              <button
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
-                  soloMios
-                    ? 'bg-primary text-white'
-                    : 'text-muted hover:bg-subtle'
-                }`}
-                onClick={() => setSoloMios(true)}
-                type="button"
-              >
-                Subidos por mí
-              </button>
-            </div>
+            canManageMaterials && (
+              <div className="flex gap-2 rounded-xl border border-line bg-card p-1.5 shadow-xs">
+                <button
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+                    !soloMios
+                      ? 'bg-primary text-white'
+                      : 'text-muted hover:bg-subtle'
+                  }`}
+                  onClick={() => setSoloMios(false)}
+                  type="button"
+                >
+                  Todos los archivos
+                </button>
+                <button
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+                    soloMios
+                      ? 'bg-primary text-white'
+                      : 'text-muted hover:bg-subtle'
+                  }`}
+                  onClick={() => setSoloMios(true)}
+                  type="button"
+                >
+                  Subidos por mí
+                </button>
+              </div>
+            )
           )}
         </div>
 
@@ -250,6 +256,16 @@ export default function ArchivosPage() {
               <ArchivosListTable
                 archivos={archivos}
                 canDelete={canDeleteFiles}
+                emptyDescription={
+                  canManageMaterials
+                    ? 'Aquí aparecerán los archivos subidos al repositorio y las entregas de tus secciones para ver o descargar.'
+                    : 'Cuando subas archivos en tus entregas de tareas, aparecerán aquí para que puedas verlos y descargarlos en cualquier momento.'
+                }
+                emptyTitle={
+                  canManageMaterials
+                    ? 'Aún no hay archivos en el repositorio'
+                    : 'Aún no has subido archivos'
+                }
                 isDeleting={deleteMutation.isPending}
                 isLoading={archivosQuery.isLoading}
                 onDelete={(id) => deleteMutation.mutate(id)}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { EmptyState, LoadingState } from '../../../shared/components/ui/StateViews'
 import FileDropzoneUploader from '../../../shared/components/ui/FileDropzoneUploader'
+import ArchivoAttachmentList from '../../archivos/components/ArchivoAttachmentList'
 import {
   isTaskClosedForSubmission,
   isTaskLateWindowExpired,
@@ -252,6 +253,31 @@ export default function TareasList({
                   </span>
                 </div>
               )}
+
+              {isStudent && existingDelivery?.archivos_adjuntos?.length > 0 && (
+                <div className="mt-2.5 space-y-1.5 rounded-lg border border-line bg-subtle/50 p-2.5">
+                  <p className="text-[11px] font-bold text-ink">
+                    Tus archivos subidos ({existingDelivery.archivos_adjuntos.length}):
+                  </p>
+                  <ArchivoAttachmentList
+                    files={existingDelivery.archivos_adjuntos}
+                  />
+                </div>
+              )}
+
+              {isStudent &&
+                existingDelivery?.archivos_retroalimentacion?.length > 0 && (
+                  <div className="mt-2 space-y-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 p-2.5">
+                    <p className="text-[11px] font-extrabold text-indigo-950">
+                      Retroalimentación adjuntada por el docente:
+                    </p>
+                    <ArchivoAttachmentList
+                      files={existingDelivery.archivos_retroalimentacion}
+                      icon="rate_review"
+                      tone="indigo"
+                    />
+                  </div>
+                )}
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-[11px] text-muted">
                 <span>

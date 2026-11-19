@@ -1,3 +1,4 @@
+import io
 from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
@@ -7,7 +8,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from .serializers import ArchivoSerializer
 from .services import obtener_url_archivo
-from .views import ArchivoDownloadView
+from .views import ArchivoContenidoView, ArchivoDownloadView
 
 
 class ObtenerUrlArchivoTests(SimpleTestCase):
@@ -57,11 +58,14 @@ class ObtenerUrlArchivoTests(SimpleTestCase):
         url = obtener_url_archivo(archivo_local, request=request)
         self.assertEqual(url, 'http://testserver/media/uploads/1/nota.txt')
 
-    def test_serializer_retorna_url_regenerada(self):
+    def test_serializer_retorna_url_regenerada_y_url_descarga(self):
         serializer = ArchivoSerializer(self.archivo_r2)
         data = serializer.data
         self.assertNotEqual(data['url_publica'], self.archivo_r2.url_publica)
         self.assertIn('X-Amz-Expires=86400', data['url_publica'])
+        self.assertIn('url_descarga', data)
+        query_descarga = parse_qs(urlparse(data['url_descarga']).query)
+        self.assertIn('attachment;', query_descarga.get('response-content-disposition', [''])[0])
 
     @patch('apps.archivos.views.get_object_or_404')
     def test_download_view_redirige_a_url_vigente(self, mock_get_object):
@@ -75,3 +79,36 @@ class ObtenerUrlArchivoTests(SimpleTestCase):
         self.assertEqual(response.status_code, 302)
         query = parse_qs(urlparse(response['Location']).query)
         self.assertIn('attachment;', query.get('response-content-disposition', [''])[0])
+
+    @patch('apps.archivos.views.abrir_archivo_storage')
+    @patch('apps.archivos.views.get_object_or_404')
+    def test_contenido_view_permite_ver_y_descargar_al_dueno(self, mock_get_object, mock_open):
+        mock_get_object.return_value = self.archivo_r2
+        mock_open.side_effect = [io.BytesIO(b'%PDF-1.4 demo'), io.BytesIO(b'%PDF-1.4 demo')]
+        factory = APIRequestFactory()
+        owner_student = SimpleNamespace(is_authenticated=True, id=10)
+
+        req_view = factory.get('/api/v1/archivos/1/contenido/')
+        force_authenticate(req_view, user=owner_student)
+        res_view = ArchivoContenidoView.as_view()(req_view, pk=1)
+        self.assertEqual(res_view.status_code, 200)
+        self.assertIn('inline', res_view['Content-Disposition'])
+        self.assertEqual(res_view['Content-Type'], 'application/pdf')
+
+        req_download = factory.get('/api/v1/archivos/1/contenido/?download=1')
+        force_authenticate(req_download, user=owner_student)
+        res_download = ArchivoContenidoView.as_view()(req_download, pk=1)
+        self.assertEqual(res_download.status_code, 200)
+        self.assertIn('attachment', res_download['Content-Disposition'])
+
+    @patch('apps.archivos.views.usuario_puede_acceder_archivo', return_value=False)
+    @patch('apps.archivos.views.get_object_or_404')
+    def test_contenido_view_rechaza_usuario_sin_permiso(self, mock_get_object, _mock_perm):
+        mock_get_object.return_value = self.archivo_r2
+        factory = APIRequestFactory()
+        other_student = SimpleNamespace(is_authenticated=True, id=99)
+
+        req = factory.get('/api/v1/archivos/1/contenido/?download=1')
+        force_authenticate(req, user=other_student)
+        res = ArchivoContenidoView.as_view()(req, pk=1)
+        self.assertEqual(res.status_code, 403)

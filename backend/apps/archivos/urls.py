@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    ArchivoContenidoView,
     ArchivoDetailView,
     ArchivoDownloadView,
     ArchivoListUploadView,
@@ -14,4 +15,5 @@ urlpatterns = [
     path('tipos/', TipoArchivoListView.as_view(), name='archivos-tipos'),
     path('<int:pk>/', ArchivoDetailView.as_view(), name='archivos-detail'),
     path('<int:pk>/descargar/', ArchivoDownloadView.as_view(), name='archivos-download'),
+    path('<int:pk>/contenido/', ArchivoContenidoView.as_view(), name='archivos-content'),
 ]
