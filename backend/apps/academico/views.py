@@ -5,25 +5,31 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .models import (
+    AnuncioAcademico,
     Asignatura,
     Carrera,
     Departamento,
+    EntregaAcademica,
     EstadoInscripcion,
     Inscripcion,
     PeriodoAcademico,
     Seccion,
     SeccionDocente,
+    Tarea,
     EntregaTarea,
 )
 from .serializers import (
+    AnuncioAcademicoSerializer,
     AsignaturaSerializer,
     CarreraSerializer,
     DepartamentoSerializer,
+    EntregaAcademicaSerializer,
     EstadoInscripcionSerializer,
     InscripcionSerializer,
     PeriodoAcademicoSerializer,
     SeccionDocenteSerializer,
     SeccionSerializer,
+    TareaSerializer,
     EntregaTareaSerializer,
 )
 from .services import (
@@ -32,6 +38,45 @@ from .services import (
     cambiar_estado_revision, 
     reabrir_entrega
 )
+
+
+class EntregaAcademicaListCreateView(generics.ListCreateAPIView):
+    queryset = EntregaAcademica.objects.all().order_by('id')
+    serializer_class = EntregaAcademicaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class EntregaAcademicaDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = EntregaAcademica.objects.all()
+    serializer_class = EntregaAcademicaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class AnuncioAcademicoListCreateView(generics.ListCreateAPIView):
+    queryset = AnuncioAcademico.objects.all()
+    serializer_class = AnuncioAcademicoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(autor=self.request.user)
+
+
+class AnuncioAcademicoDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = AnuncioAcademico.objects.all()
+    serializer_class = AnuncioAcademicoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class TareaListCreateView(generics.ListCreateAPIView):
+    queryset = Tarea.objects.all().order_by('id')
+    serializer_class = TareaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class TareaDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Tarea.objects.all()
+    serializer_class = TareaSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class CarreraListCreateView(generics.ListCreateAPIView):

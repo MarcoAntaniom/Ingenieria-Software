@@ -3,6 +3,7 @@ from rest_framework import serializers
 from apps.usuarios.models import PerfilDocente, PerfilEstudiante
 from .models import (
     Asignatura,
+    AnuncioAcademico,
     Carrera,
     Departamento,
     EstadoInscripcion,
@@ -141,12 +142,28 @@ class EntregaAcademicaSerializer(serializers.ModelSerializer):
         fields = ['id', 'titulo', 'archivo', 'fecha_creacion']
 
 
+class AnuncioAcademicoSerializer(serializers.ModelSerializer):
+    autor = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = AnuncioAcademico
+        fields = ['id', 'titulo', 'contenido', 'autor', 'fecha_publicacion', 'dirigido_a']
+        read_only_fields = ['autor', 'fecha_publicacion']
+
+
 # --- SERIALIZADORES PARA TAREAS Y ENTREGAS CON BORRADOR ---
 
 class TareaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tarea
-        fields = ['id', 'titulo', 'descripcion', 'fecha_cierre', 'permite_atrasados']
+        fields = [
+            'id',
+            'titulo',
+            'descripcion',
+            'fecha_cierre',
+            'permite_atrasados',
+            'aplica_penalizacion_atraso',
+        ]
 
 
 class EntregaTareaSerializer(serializers.ModelSerializer):
