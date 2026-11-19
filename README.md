@@ -1,81 +1,75 @@
-# Ingenieria-Software
+# Campus Digital Integrado — LMS (Ingeniería de Software)
 
-## Notificaciones en tiempo real (backend)
+Plataforma web de **Entorno Virtual de Aprendizaje (EVA / LMS)** diseñada para centralizar la gestión académica, publicación de materiales de estudio, evaluación mediante tareas y rúbricas, comunicación institucional cifrada y notificaciones en tiempo real bajo control de acceso basado en roles (**Administrador**, **Docente** y **Estudiante**).
 
-El backend expone notificaciones persistentes por REST y eventos en tiempo real por
-WebSocket. Render admite WebSockets, por lo que no es necesario migrar a Railway.
-Redis es necesario para compartir los eventos entre procesos o instancias; sin
-`REDIS_URL`, el entorno usa un canal en memoria para desarrollo/local.
+---
 
-La creación de notificaciones, el almacenamiento y la entrega WebSocket están
-separados. Las notificaciones se escriben en la base de datos junto a un evento
-outbox; workers independientes reclaman eventos con bloqueos de base de datos
-sin colisionar y reintentan fallos con espera exponencial. La entrega es
-**al menos una vez**: el cliente debe tratar el `notification.id` como clave
-idempotente porque una caída después del envío puede ocasionar una repetición.
+## Arquitectura y Stack Tecnológico
 
-### Despliegue en Render
+| Capa | Tecnologías Principales |
+| :--- | :--- |
+| **Frontend (`IngSoftwareLMS/`)** | React 19, Vite 8, Tailwind CSS v4, TanStack React Query v5, Zustand v5, React Router v7, Axios (Despliegue en **Cloudflare Pages**). |
+| **Backend (`backend/`)** | Python 3.12, Django 6.1, Django REST Framework (DRF), SimpleJWT, Channels + Daphne (ASGI) (Despliegue en **Render**). |
+| **Base de Datos y Caché** | **PostgreSQL** (gestionado en **Supabase**) y **Redis** para distribución de eventos WebSocket y colas en segundo plano. |
+| **Almacenamiento Cloud** | **Cloudflare R2** (API compatible con S3 mediante `django-storages` y `boto3`) con límite de hasta 50 MB por archivo. |
 
-Configura el directorio raíz del servicio como `backend`, instala dependencias
-desde `requirements.txt` y utiliza este comando de inicio:
+---
+
+## Estructura del Repositorio
+
+- **[`backend/`](./backend/README.md)**: API REST versionada (`/api/v1/`), servidor WebSocket (`/ws/notificaciones/`), lógica de negocio, cifrado de mensajería y workers de notificaciones.
+- **[`IngSoftwareLMS/`](./IngSoftwareLMS/README.md)**: Aplicación Single Page Application (SPA) con arquitectura modular *feature-based*, paneles diferenciados por rol y aula virtual por sección.
+
+---
+
+## Módulos y Reglas de Negocio Principales
+
+1. **Autenticación JWT y Control de Acceso (RBAC):**
+   - Inicio de sesión con correo institucional, validación de cuentas activas, renovación automática de tokens (`access` y `refresh`) y aislamiento estricto de datos privados entre estudiantes (cumplimiento Ley N° 19.628).
+2. **Gestión Académica y Aula Virtual por Sección:**
+   - Administración de carreras, departamentos, períodos académicos, asignaturas, secciones, asignación de docentes e inscripción de estudiantes.
+   - Cada sección cuenta con su propia aula virtual aislada con pestañas de **Tareas**, **Materiales de Estudio**, **Anuncios** y **Foros de Debate**.
+3. **Tareas, Entregas (Borrador / Definitiva) y Ventana Tardía de 1 Hora:**
+   - Creación de tareas con validación de fechas (impidiendo fechas pasadas) y **fecha de término opcional**.
+   - Guardado de avances en estado **Borrador** y confirmación de **Envío Definitivo** con emisión de **Comprobante Digital (`#COMP-XXXXX`)** con marca de tiempo.
+   - Si una tarea permite entregas tardías, habilita un **máximo de 1 hora de espera** tras la fecha de término y luego **bloquea** automáticamente cualquier subida o envío.
+   - Los estudiantes no pueden eliminar archivos ya subidos.
+4. **Calificación Escala Chilena (1.0 a 7.0), Rúbricas y Retroalimentación:**
+   - Evaluación en escala oficial chilena (**1.0 a 7.0** con un decimal) y estado conceptual automático (**APROBADO** $\ge 4.0$ / **REPROBADO** $< 4.0$).
+   - **Descuento automático del 1%** en entregas realizadas dentro de la ventana tardía de 1 hora, con opción de **exención docente** justificada.
+   - Asociación de **rúbricas dinámicas** con cálculo automático de nota sugerida, adjunto de archivos corregidos de retroalimentación, paso automático a estado **En Revisión** y **reapertura individual** de entregas (`REABIERTA`).
+5. **Materiales de Estudio por Sección:**
+   - Carga *Drag & Drop* exclusiva para docentes y administradores, asignada obligatoriamente a una sección académica y almacenada en Cloudflare R2.
+6. **Comunicación y Notificaciones en Tiempo Real:**
+   - Tablón de anuncios por sección, foros temáticos con hilos de respuesta y mensajería directa privada cifrada en base de datos con `Fernet` (AES/PBKDF2).
+   - Notificaciones persistentes (patrón *Outbox*) y entrega en tiempo real mediante **WebSockets** al publicar anuncios, tareas visibles, calificaciones, temas/respuestas de foro y mensajes directos.
+7. **Seguimiento Estudiantil y Learning Analytics:**
+   - Panel **"Mis Pendientes"** priorizado por fecha de vencimiento (con depuración automática al entregar) y **"Mi Ficha Académica"** para estudiantes.
+   - Tablero de **Learning Analytics** para docentes y administradores con métricas de entregas, promedio general y alertas tempranas de estudiantes en riesgo ($< 4.0$).
+
+---
+
+## Inicio Rápido en Desarrollo Local
+
+### 1. Backend (`backend/`)
 
 ```sh
-daphne -b 0.0.0.0 -p $PORT config.asgi:application
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
-Ejecuta `python manage.py migrate` durante el despliegue. Crea un servicio Redis
-(Render Key Value o un Redis compatible) y define `REDIS_URL` en el backend con
-su URL privada. Configura también `ALLOWED_HOSTS` y `CORS_ALLOWED_ORIGINS` con
-los dominios reales del backend y frontend. Por defecto, los orígenes WebSocket
-permitidos son los de `CORS_ALLOWED_ORIGINS`; puedes sobrescribirlos con
-`WEBSOCKET_ALLOWED_ORIGINS`. En producción, conecta siempre un Redis compartido
-para no perder mensajes entre procesos ni instancias.
+*(Consulta [`backend/README.md`](./backend/README.md) para el detalle de variables `.env`, worker de notificaciones y despliegue en Render).*
 
-Crea además un **Background Worker** de Render, con el mismo repositorio,
-directorio raíz y variables de entorno del backend, y como comando de inicio:
+### 2. Frontend (`IngSoftwareLMS/`)
 
 ```sh
-python manage.py procesar_notificaciones --batch-size 100 --interval 1
+cd IngSoftwareLMS
+npm install
+npm run dev
 ```
 
-Puedes escalar el número de workers según el volumen; cada worker reclama
-lotes independientes. El API y el worker deben usar la misma base de datos y
-Redis. El worker procesa los eventos pendientes aproximadamente cada segundo.
-Redis distribuye los eventos a las instancias del backend que mantienen las
-conexiones WebSocket.
-
-Programa un Cron Job diario de Render con el comando
-`python manage.py limpiar_eventos_notificacion --dias 14` para retirar por lotes
-los registros de entrega ya enviados. El historial de notificaciones de usuarios
-se conserva; los eventos fallidos no se borran automáticamente.
-
-### API
-
-Todas estas rutas REST requieren autenticación JWT de acceso como el resto de la API.
-
-- `GET /api/v1/notificaciones/` lista las notificaciones propias. Acepta
-  `?leida=true`, `?leida=false` y `?tipo=comunicacion` (código del catálogo).
-- `GET /api/v1/notificaciones/tipos/` lista los tipos activos del catálogo.
-- `GET /api/v1/notificaciones/no-leidas/contador/` devuelve `{"no_leidas": N}`.
-- `POST /api/v1/notificaciones/<id>/leer/` marca una notificación propia como leída.
-- `POST /api/v1/notificaciones/leer-todas/` marca todas las propias como leídas.
-
-El WebSocket autenticado es `wss://<backend>/ws/notificaciones/?token=<access_token>`.
-Cada evento llega como JSON con forma
-`{"type":"notification","notification":{...}}`. El token se valida con el mismo
-JWT de acceso del resto de la API; usa siempre `wss://` en producción y no
-almacenes la URL completa en logs del cliente.
-
-Se crean notificaciones al publicar anuncios, tareas visibles, calificaciones,
-nuevos temas de foro, respuestas a temas y mensajes directos. El mensaje privado
-no se incluye en el contenido de la notificación.
-
-El catálogo `tipos_notificacion` se puede consultar por API y administrar en
-Django Admin. Las tablas `notificaciones` y `eventos_notificacion` almacenan,
-respectivamente, el historial del usuario y el estado de entrega/reintentos.
-Los avisos de sección se encolan como `solicitudes_notificacion` y el worker
-expande la audiencia en páginas de 500 usuarios; esto evita resolver grupos
-grandes durante la petición HTTP. Los eventos y solicitudes que agotan los
-reintentos quedan en estado `fallido` para diagnóstico desde Django Admin. El
-catálogo incluye `comunicacion` y `evaluacion`; para agregar nuevos tipos, crea
-un registro activo en Django Admin antes de emitir notificaciones con ese código.
+*(Consulta [`IngSoftwareLMS/README.md`](./IngSoftwareLMS/README.md) para el detalle de rutas, componentes y configuración de entorno).*

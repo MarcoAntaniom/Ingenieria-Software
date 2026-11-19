@@ -57,7 +57,7 @@ class Tarea(models.Model):
     titulo = models.CharField(max_length=200)
     instrucciones = models.TextField(null=True, default=None)
     fecha_apertura = models.DateTimeField()
-    fecha_limite = models.DateTimeField()
+    fecha_limite = models.DateTimeField(null=True, blank=True)
     puntaje_maximo = models.DecimalField(max_digits=5, decimal_places=2)
     permitir_entregas_tardias = models.BooleanField(default=False)
     es_visible = models.BooleanField(default=True)

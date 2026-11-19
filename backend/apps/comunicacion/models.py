@@ -7,7 +7,10 @@ class Anuncio(models.Model):
         'academico.Seccion',
         on_delete=models.CASCADE,
         related_name='anuncios',
+        null=True,
+        blank=True,
     )
+    es_global = models.BooleanField(default=False)
     autor = models.ForeignKey(
         'usuarios.Usuarios',
         on_delete=models.CASCADE,

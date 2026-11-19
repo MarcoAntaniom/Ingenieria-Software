@@ -1,7 +1,65 @@
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .models import EntregaTarea
+from .models import EntregaTarea, Inscripcion, SeccionDocente
 from decimal import Decimal
+
+
+def es_admin_usuario(usuario):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return False
+    rol = getattr(usuario, 'rol', None)
+    if getattr(rol, 'id', None) == 1:
+        return True
+    codigo = (getattr(rol, 'codigo', '') or '').strip().lower()
+    nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
+    return (
+        codigo in ('admin', 'adm', 'administrador')
+        or 'admin' in codigo
+        or 'admin' in nombre
+    )
+
+
+def es_docente_usuario(usuario):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return False
+    if hasattr(usuario, 'perfil_docente'):
+        return True
+    rol = getattr(usuario, 'rol', None)
+    codigo = (getattr(rol, 'codigo', '') or '').strip().lower()
+    nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
+    return (
+        any(k in codigo or k in nombre for k in ('docente', 'profesor', 'teacher'))
+        or codigo == 'doc'
+    )
+
+
+def obtener_secciones_usuario_ids(usuario):
+    """
+    Retorna los IDs de secciones a las que pertenece el usuario:
+    - `None` para administradores (acceso sin restricción de sección).
+    - Lista de IDs de `SeccionDocente` para docentes.
+    - Lista de IDs de `Inscripcion` para estudiantes.
+    - `[]` si no tiene perfil o no está autenticado.
+    """
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return []
+    if es_admin_usuario(usuario):
+        return None
+    if es_docente_usuario(usuario):
+        if hasattr(usuario, 'perfil_docente'):
+            return list(
+                SeccionDocente.objects.filter(
+                    docente=usuario.perfil_docente
+                ).values_list('seccion_id', flat=True)
+            )
+        return []
+    if hasattr(usuario, 'perfil_estudiante'):
+        return list(
+            Inscripcion.objects.filter(
+                estudiante=usuario.perfil_estudiante
+            ).values_list('seccion_id', flat=True)
+        )
+    return []
 
 def guardar_borrador_entrega(tarea, estudiante, archivo=None, comentario=None):
     """Permite crear o actualizar un avance sin marcarlo como entregado oficialmente."""
@@ -42,10 +100,13 @@ def confirmar_envio_definitivo(entrega_id, estudiante):
     ahora = timezone.now()
     tarea = entrega.tarea
 
-    # Validar si superó la fecha límite oficial
+    # Validar si superó la fecha límite oficial (máximo 1 hora de espera en entrega tardía)
     if tarea.fecha_cierre and ahora > tarea.fecha_cierre:
         if not tarea.permite_atrasados:
             raise ValidationError("El plazo de entrega ha expirado y la tarea no acepta envíos fuera de plazo.")
+        limite_tardio = tarea.fecha_cierre + timezone.timedelta(hours=1)
+        if ahora > limite_tardio:
+            raise ValidationError("El tiempo máximo de espera para entregas tardías (1 hora) ha expirado y la entrega está bloqueada.")
         entrega.es_fuera_de_plazo = True
 
     # Cambiar estado y estampar el timestamp oficial

@@ -126,8 +126,16 @@ AWS_S3_ENDPOINT_URL = f"https://{env('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com"
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_DEFAULT_ACL = None  # R2 no utiliza ACLs de AWS
 AWS_S3_FILE_OVERWRITE = False
+AWS_QUERYSTRING_EXPIRE = 86400  # 24 horas para URLs prefirmadas de R2
 
-AWS_S3_CUSTOM_DOMAIN = env('R2_CUSTOM_DOMAIN', default=None)
+_r2_custom_domain = env('R2_CUSTOM_DOMAIN', default='').strip()
+if _r2_custom_domain:
+    _r2_custom_domain = (
+        _r2_custom_domain.removeprefix('https://')
+        .removeprefix('http://')
+        .rstrip('/')
+    )
+AWS_S3_CUSTOM_DOMAIN = _r2_custom_domain or None
 
 STORAGES = {
     "default": {
