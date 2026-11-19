@@ -305,7 +305,7 @@ export default function TareasList({
                     </button>
                   )}
 
-                  {onSelectTask && (
+                  {!isStudent && onSelectTask && (
                     <button
                       className="rounded-lg bg-primary/10 px-3 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-white"
                       onClick={() =>

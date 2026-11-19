@@ -1,6 +1,7 @@
 import re
 from rest_framework import serializers
 from .models import Archivo, TipoArchivo
+from .services import obtener_url_archivo
 
 SECCION_PREFIX_RE = re.compile(r'^materiales/seccion_(\d+)/')
 
@@ -16,6 +17,7 @@ class ArchivoSerializer(serializers.ModelSerializer):
     subido_por_nombre = serializers.SerializerMethodField()
     es_material = serializers.SerializerMethodField()
     seccion_id = serializers.SerializerMethodField()
+    url_publica = serializers.SerializerMethodField()
 
     class Meta:
         model = Archivo
@@ -47,3 +49,6 @@ class ArchivoSerializer(serializers.ModelSerializer):
             return None
         match = SECCION_PREFIX_RE.match(obj.nombre_almacenamiento)
         return int(match.group(1)) if match else None
+
+    def get_url_publica(self, obj):
+        return obtener_url_archivo(obj, request=self.context.get('request'))

@@ -199,6 +199,7 @@ export default function CursoDetallePage() {
             canManageSection={canManageSection}
             isLoadingTasks={tareasQuery.isLoading}
             isStudent={isStudent}
+            key={numericSeccionId}
             seccionId={numericSeccionId}
             tasks={sectionTareas}
           />

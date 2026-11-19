@@ -28,7 +28,9 @@ export default function RecentAnnouncementsPanel({ isLoading, announcements }) {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                  Sección #{anuncio.seccion}
+                  {anuncio.es_global || !anuncio.seccion
+                    ? 'Para todos'
+                    : `Sección #${anuncio.seccion}`}
                 </span>
                 {anuncio.fijado && (
                   <span className="text-[10px] font-bold text-amber-700">

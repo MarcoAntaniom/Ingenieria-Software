@@ -25,7 +25,9 @@ export default function AnunciosWall({ anuncios, isLoading }) {
         >
           <div className="flex items-center justify-between gap-2">
             <span className="rounded bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-              Sección #{anuncio.seccion}
+              {anuncio.es_global || !anuncio.seccion
+                ? 'Para todos'
+                : `Sección #${anuncio.seccion}`}
             </span>
             {anuncio.fijado && (
               <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">

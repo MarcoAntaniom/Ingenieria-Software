@@ -64,7 +64,6 @@ export default function AppLayout() {
     { to: '/cursos', icon: 'school', label: 'Cursos y Secciones' },
     { to: '/comunicacion', icon: 'forum', label: 'Comunicación y Foros' },
     { to: '/evaluaciones', icon: 'assignment', label: 'Evaluaciones y Tareas' },
-    { to: '/archivos', icon: 'cloud_upload', label: 'Archivos (Drag & Drop)' },
     {
       to: '/notificaciones',
       icon: 'notifications',

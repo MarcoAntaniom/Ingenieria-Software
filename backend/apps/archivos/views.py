@@ -4,6 +4,7 @@ import mimetypes
 from pathlib import Path
 from django.conf import settings
 from django.core.files.storage import default_storage, FileSystemStorage
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -13,6 +14,7 @@ from rest_framework.views import APIView
 from apps.academico.models import Seccion
 from .models import Archivo, TipoArchivo
 from .serializers import ArchivoSerializer, TipoArchivoSerializer
+from .services import obtener_url_archivo
 
 DEFAULT_MAX_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXTENSIONS = {
@@ -127,7 +129,7 @@ class ArchivoListUploadView(APIView):
         if solo_mios:
             queryset = queryset.filter(subido_por=request.user)
 
-        serializer = ArchivoSerializer(queryset, many=True)
+        serializer = ArchivoSerializer(queryset, many=True, context={'request': request})
         return Response(
             {
                 'mensaje': 'Archivos obtenidos correctamente',
@@ -160,7 +162,7 @@ class ArchivoListUploadView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        serialized = ArchivoSerializer(creados, many=True).data
+        serialized = ArchivoSerializer(creados, many=True, context={'request': request}).data
         return Response(
             {
                 'mensaje': 'Archivo(s) subido(s) correctamente',
@@ -193,7 +195,7 @@ class MaterialEstudioListCreateView(APIView):
             nombre_almacenamiento__startswith=prefix
         ).order_by('-creado_en')
 
-        serializer = ArchivoSerializer(queryset, many=True)
+        serializer = ArchivoSerializer(queryset, many=True, context={'request': request})
         return Response(
             {
                 'mensaje': 'Materiales de estudio obtenidos correctamente',
@@ -256,7 +258,7 @@ class MaterialEstudioListCreateView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        serialized = ArchivoSerializer(creados, many=True).data
+        serialized = ArchivoSerializer(creados, many=True, context={'request': request}).data
         return Response(
             {
                 'mensaje': 'Material(es) de estudio publicado(s) exitosamente en la sección',
@@ -291,6 +293,16 @@ class ArchivoDetailView(APIView):
 
         archivo.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ArchivoDownloadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        archivo = get_object_or_404(Archivo, pk=pk)
+        forzar_descarga = request.query_params.get('download', '').lower() in {'1', 'true', 'yes'}
+        url = obtener_url_archivo(archivo, request=request, download=forzar_descarga)
+        return HttpResponseRedirect(url)
 
 
 class TipoArchivoListView(APIView):

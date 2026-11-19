@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from apps.academico.services import obtener_secciones_usuario_ids
 from apps.usuarios.models import PerfilEstudiante, PerfilDocente
 from apps.archivos.models import Archivo
 from .models import (
@@ -164,6 +165,10 @@ class TareaView(APIView):
             'seccion__asignatura', 'rubrica'
         ).prefetch_related('rubrica__rubrica__criterios').all().order_by('-creado_en')
 
+        secciones_ids = obtener_secciones_usuario_ids(request.user)
+        if secciones_ids is not None:
+            queryset = queryset.filter(seccion_id__in=secciones_ids)
+
         seccion_id = request.query_params.get('seccion')
         if seccion_id:
             queryset = queryset.filter(seccion_id=seccion_id)
@@ -190,6 +195,13 @@ class TareaView(APIView):
         serializer = TareaSerializer(data=request.data)
 
         if serializer.is_valid():
+            secciones_ids = obtener_secciones_usuario_ids(request.user)
+            seccion_obj = serializer.validated_data.get('seccion')
+            if secciones_ids is not None and (not seccion_obj or seccion_obj.id not in secciones_ids):
+                return Response(
+                    {"mensaje": "No tienes permiso para crear tareas en una sección que no te corresponde."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             tarea = serializer.save()
             return Response(
                 {
@@ -220,6 +232,10 @@ class EntregaEvaluacionListCreateView(APIView):
             'evaluaciones_criterios__nivel_seleccionado',
         ).all().order_by('-fecha_envio')
 
+        secciones_ids = obtener_secciones_usuario_ids(request.user)
+        if secciones_ids is not None:
+            queryset = queryset.filter(tarea__seccion_id__in=secciones_ids)
+
         tarea_id = request.query_params.get('tarea')
         if tarea_id:
             queryset = queryset.filter(tarea_id=tarea_id)
@@ -235,7 +251,9 @@ class EntregaEvaluacionListCreateView(APIView):
             else:
                 queryset = queryset.none()
 
-        serializer = EntregaTareaEvaluacionSerializer(queryset, many=True)
+        serializer = EntregaTareaEvaluacionSerializer(
+            queryset, many=True, context={'request': request}
+        )
         return Response(
             {
                 "mensaje": "Entregas obtenidas correctamente",

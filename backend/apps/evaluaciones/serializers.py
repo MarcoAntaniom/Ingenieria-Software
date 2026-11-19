@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.archivos.services import obtener_url_archivo
 from .models import (
     Tarea,
     EntregaTarea,
@@ -225,7 +226,9 @@ class EntregaTareaEvaluacionSerializer(serializers.ModelSerializer):
             {
                 'id': rel.archivo.id,
                 'nombre_original': rel.archivo.nombre_original,
-                'url_publica': rel.archivo.url_publica,
+                'url_publica': obtener_url_archivo(
+                    rel.archivo, request=self.context.get('request')
+                ),
                 'peso_bytes': rel.archivo.peso_bytes,
             }
             for rel in relaciones
@@ -247,7 +250,9 @@ class EntregaTareaEvaluacionSerializer(serializers.ModelSerializer):
             {
                 'id': rel.archivo.id,
                 'nombre_original': rel.archivo.nombre_original,
-                'url_publica': rel.archivo.url_publica,
+                'url_publica': obtener_url_archivo(
+                    rel.archivo, request=self.context.get('request')
+                ),
                 'peso_bytes': rel.archivo.peso_bytes,
             }
             for rel in relaciones

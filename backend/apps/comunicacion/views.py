@@ -1,7 +1,13 @@
+from django.db.models import Q
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from apps.academico.services import (
+    es_admin_usuario,
+    es_docente_usuario,
+    obtener_secciones_usuario_ids,
+)
 from .models import Anuncio, Foro, TemaForo, MensajeForo, Conversacion, MensajeDirecto
 from .serializers import (
     AnuncioSerializer,
@@ -20,13 +26,37 @@ class AnuncioViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Anuncio.objects.select_related('autor').all().order_by('-fijado', '-creado_en')
+        secciones_ids = obtener_secciones_usuario_ids(self.request.user)
         seccion_id = self.request.query_params.get('seccion')
+
         if seccion_id:
-            queryset = queryset.filter(seccion_id=seccion_id)
+            try:
+                seccion_num = int(seccion_id)
+            except (TypeError, ValueError):
+                return queryset.none()
+            if secciones_ids is not None and seccion_num not in secciones_ids:
+                return queryset.none()
+            return queryset.filter(seccion_id=seccion_num)
+
+        if secciones_ids is not None:
+            queryset = queryset.filter(
+                Q(seccion_id__in=secciones_ids) | Q(es_global=True) | Q(seccion__isnull=True)
+            )
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(autor=self.request.user)
+        usuario = self.request.user
+        es_global = serializer.validated_data.get('es_global', False)
+        seccion = serializer.validated_data.get('seccion')
+
+        if not (es_admin_usuario(usuario) or es_docente_usuario(usuario)):
+            raise PermissionDenied('Solo docentes y administradores pueden publicar anuncios.')
+
+        secciones_ids = obtener_secciones_usuario_ids(usuario)
+        if not es_global and seccion and secciones_ids is not None and seccion.id not in secciones_ids:
+            raise PermissionDenied('No puedes publicar anuncios en una sección que no te corresponde.')
+
+        serializer.save(autor=usuario)
 
     def perform_update(self, serializer):
         if serializer.instance.autor_id != self.request.user.pk:
@@ -45,12 +75,19 @@ class ForoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Foro.objects.select_related('creado_por').all().order_by('-creado_en')
+        secciones_ids = obtener_secciones_usuario_ids(self.request.user)
+        if secciones_ids is not None:
+            queryset = queryset.filter(seccion_id__in=secciones_ids)
         seccion_id = self.request.query_params.get('seccion')
         if seccion_id:
             queryset = queryset.filter(seccion_id=seccion_id)
         return queryset
 
     def perform_create(self, serializer):
+        secciones_ids = obtener_secciones_usuario_ids(self.request.user)
+        seccion = serializer.validated_data.get('seccion')
+        if secciones_ids is not None and (not seccion or seccion.id not in secciones_ids):
+            raise PermissionDenied('No puedes crear foros en una sección que no te corresponde.')
         serializer.save(creado_por=self.request.user)
 
     @action(detail=True, methods=['get'], url_path='temas')
@@ -63,11 +100,21 @@ class ForoViewSet(viewsets.ModelViewSet):
 
 
 class TemaForoViewSet(viewsets.ModelViewSet):
-    queryset = TemaForo.objects.select_related('autor').all().order_by('-creado_en')
     serializer_class = TemaForoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = TemaForo.objects.select_related('autor').all().order_by('-creado_en')
+        secciones_ids = obtener_secciones_usuario_ids(self.request.user)
+        if secciones_ids is not None:
+            queryset = queryset.filter(foro__seccion_id__in=secciones_ids)
+        return queryset
+
     def perform_create(self, serializer):
+        secciones_ids = obtener_secciones_usuario_ids(self.request.user)
+        foro = serializer.validated_data.get('foro')
+        if secciones_ids is not None and (not foro or foro.seccion_id not in secciones_ids):
+            raise PermissionDenied('No puedes publicar temas en un foro que no te corresponde.')
         serializer.save(autor=self.request.user)
 
     @action(detail=True, methods=['get'], url_path='mensajes')
@@ -82,11 +129,21 @@ class TemaForoViewSet(viewsets.ModelViewSet):
 
 
 class MensajeForoViewSet(viewsets.ModelViewSet):
-    queryset = MensajeForo.objects.select_related('autor').all().order_by('creado_en')
     serializer_class = MensajeForoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = MensajeForo.objects.select_related('autor').all().order_by('creado_en')
+        secciones_ids = obtener_secciones_usuario_ids(self.request.user)
+        if secciones_ids is not None:
+            queryset = queryset.filter(tema__foro__seccion_id__in=secciones_ids)
+        return queryset
+
     def perform_create(self, serializer):
+        secciones_ids = obtener_secciones_usuario_ids(self.request.user)
+        tema = serializer.validated_data.get('tema')
+        if secciones_ids is not None and (not tema or tema.foro.seccion_id not in secciones_ids):
+            raise PermissionDenied('No puedes responder en un foro que no te corresponde.')
         serializer.save(autor=self.request.user)
 
 

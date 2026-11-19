@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from apps.usuarios.models import Usuarios
 from apps.archivos.models import Archivo
+from apps.archivos.services import obtener_url_archivo
 from .models import (
     Anuncio,
     ArchivoAnuncio,
@@ -28,6 +29,7 @@ class AnuncioSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'seccion',
+            'es_global',
             'autor',
             'autor_nombre',
             'titulo',
@@ -38,6 +40,20 @@ class AnuncioSerializer(serializers.ModelSerializer):
             'archivos_adjuntos',
         ]
         read_only_fields = ['autor', 'autor_nombre', 'creado_en', 'archivos_adjuntos']
+        extra_kwargs = {
+            'seccion': {'required': False, 'allow_null': True},
+        }
+
+    def validate(self, attrs):
+        es_global = attrs.get('es_global', getattr(self.instance, 'es_global', False))
+        seccion = attrs.get('seccion', getattr(self.instance, 'seccion', None))
+        if es_global:
+            attrs['seccion'] = None
+        elif not seccion:
+            raise serializers.ValidationError(
+                {'seccion': 'Debes indicar una sección o marcar el anuncio como global (para todos).'}
+            )
+        return attrs
 
     def get_autor_nombre(self, obj):
         if obj.autor_id:
@@ -50,7 +66,9 @@ class AnuncioSerializer(serializers.ModelSerializer):
             {
                 'id': rel.archivo.id,
                 'nombre_original': rel.archivo.nombre_original,
-                'url_publica': rel.archivo.url_publica,
+                'url_publica': obtener_url_archivo(
+                    rel.archivo, request=self.context.get('request')
+                ),
                 'peso_bytes': rel.archivo.peso_bytes,
             }
             for rel in relaciones
