@@ -4,7 +4,8 @@ import mimetypes
 from pathlib import Path
 from django.conf import settings
 from django.core.files.storage import default_storage, FileSystemStorage
-from django.http import HttpResponseRedirect
+from django.db.models import Q
+from django.http import FileResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -12,9 +13,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.academico.models import Seccion
+from apps.academico.services import (
+    es_admin_usuario,
+    es_docente_usuario,
+    obtener_secciones_usuario_ids,
+)
 from .models import Archivo, TipoArchivo
 from .serializers import ArchivoSerializer, TipoArchivoSerializer
-from .services import obtener_url_archivo
+from .services import (
+    abrir_archivo_storage,
+    obtener_mime_archivo,
+    obtener_url_archivo,
+    usuario_puede_acceder_archivo,
+)
 
 DEFAULT_MAX_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXTENSIONS = {
@@ -126,8 +137,25 @@ class ArchivoListUploadView(APIView):
         ).order_by('-creado_en')
 
         solo_mios = request.query_params.get('mios', '').lower() in {'true', '1'}
-        if solo_mios:
-            queryset = queryset.filter(subido_por=request.user)
+        usuario = request.user
+
+        if not es_docente_o_admin(usuario):
+            # Cumplimiento Ley 19.628: cada estudiante solo visualiza los archivos que subió.
+            queryset = queryset.filter(subido_por=usuario)
+        elif solo_mios:
+            queryset = queryset.filter(subido_por=usuario)
+        elif not es_admin_usuario(usuario) and es_docente_usuario(usuario):
+            secciones_ids = obtener_secciones_usuario_ids(usuario) or []
+            filtro = Q(subido_por=usuario)
+            if secciones_ids:
+                filtro |= Q(entregas_asociadas__entrega__tarea__seccion_id__in=secciones_ids)
+                filtro |= Q(anuncios__anuncio__seccion_id__in=secciones_ids)
+                filtro |= Q(
+                    subido_por__perfil_estudiante__inscripciones__seccion_id__in=secciones_ids
+                )
+                for sid in secciones_ids:
+                    filtro |= Q(nombre_almacenamiento__startswith=f'materiales/seccion_{sid}/')
+            queryset = queryset.filter(filtro).distinct()
 
         serializer = ArchivoSerializer(queryset, many=True, context={'request': request})
         return Response(
@@ -184,16 +212,34 @@ class MaterialEstudioListCreateView(APIView):
 
     def get(self, request):
         seccion_id = request.query_params.get('seccion')
-        if seccion_id:
-            prefix = f"materiales/seccion_{seccion_id}/"
-        else:
-            prefix = "materiales/seccion_"
+        secciones_ids = obtener_secciones_usuario_ids(request.user)
 
         queryset = Archivo.objects.select_related(
             'tipo_archivo', 'subido_por'
-        ).filter(
-            nombre_almacenamiento__startswith=prefix
         ).order_by('-creado_en')
+
+        if seccion_id:
+            try:
+                seccion_num = int(seccion_id)
+            except (TypeError, ValueError):
+                queryset = queryset.none()
+            else:
+                if secciones_ids is not None and seccion_num not in secciones_ids:
+                    queryset = queryset.none()
+                else:
+                    queryset = queryset.filter(
+                        nombre_almacenamiento__startswith=f'materiales/seccion_{seccion_num}/'
+                    )
+        else:
+            if secciones_ids is None:
+                queryset = queryset.filter(nombre_almacenamiento__startswith='materiales/seccion_')
+            elif secciones_ids:
+                filtro = Q()
+                for sid in secciones_ids:
+                    filtro |= Q(nombre_almacenamiento__startswith=f'materiales/seccion_{sid}/')
+                queryset = queryset.filter(filtro)
+            else:
+                queryset = queryset.none()
 
         serializer = ArchivoSerializer(queryset, many=True, context={'request': request})
         return Response(
@@ -295,14 +341,70 @@ class ArchivoDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+def _servir_contenido_archivo(archivo, forzar_descarga=False):
+    try:
+        file_handle = abrir_archivo_storage(archivo)
+    except FileNotFoundError:
+        return Response(
+            {'mensaje': 'El archivo solicitado no se encuentra disponible en el almacenamiento.'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    except Exception as exc:
+        return Response(
+            {'mensaje': f'No se pudo obtener el archivo desde el almacenamiento: {exc}'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    mime_type = obtener_mime_archivo(archivo)
+    filename = archivo.nombre_original or 'archivo'
+    response = FileResponse(
+        file_handle,
+        as_attachment=forzar_descarga,
+        filename=filename,
+        content_type=mime_type,
+    )
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 class ArchivoDownloadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
-        archivo = get_object_or_404(Archivo, pk=pk)
+        archivo = get_object_or_404(Archivo.objects.select_related('tipo_archivo'), pk=pk)
+        if not usuario_puede_acceder_archivo(request.user, archivo):
+            return Response(
+                {'mensaje': 'No tienes permiso para acceder o descargar este archivo.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         forzar_descarga = request.query_params.get('download', '').lower() in {'1', 'true', 'yes'}
+        if request.query_params.get('stream', '').lower() in {'1', 'true', 'yes'}:
+            return _servir_contenido_archivo(archivo, forzar_descarga=forzar_descarga)
+
         url = obtener_url_archivo(archivo, request=request, download=forzar_descarga)
         return HttpResponseRedirect(url)
+
+
+class ArchivoContenidoView(APIView):
+    """
+    Entrega el contenido binario del archivo autenticado por JWT, evitando problemas de
+    CORS o restricciones de descarga cross-origin en el navegador.
+    - `?download=1` fuerza `Content-Disposition: attachment` (descarga directa).
+    - Sin `?download=1` entrega `Content-Disposition: inline` (visualización/preview).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        archivo = get_object_or_404(Archivo.objects.select_related('tipo_archivo'), pk=pk)
+        if not usuario_puede_acceder_archivo(request.user, archivo):
+            return Response(
+                {'mensaje': 'No tienes permiso para acceder o descargar este archivo.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        forzar_descarga = request.query_params.get('download', '').lower() in {'1', 'true', 'yes'}
+        return _servir_contenido_archivo(archivo, forzar_descarga=forzar_descarga)
 
 
 class TipoArchivoListView(APIView):

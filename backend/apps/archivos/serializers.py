@@ -18,6 +18,7 @@ class ArchivoSerializer(serializers.ModelSerializer):
     es_material = serializers.SerializerMethodField()
     seccion_id = serializers.SerializerMethodField()
     url_publica = serializers.SerializerMethodField()
+    url_descarga = serializers.SerializerMethodField()
 
     class Meta:
         model = Archivo
@@ -29,6 +30,7 @@ class ArchivoSerializer(serializers.ModelSerializer):
             'nombre_original',
             'nombre_almacenamiento',
             'url_publica',
+            'url_descarga',
             'peso_bytes',
             'creado_en',
             'es_material',
@@ -52,3 +54,6 @@ class ArchivoSerializer(serializers.ModelSerializer):
 
     def get_url_publica(self, obj):
         return obtener_url_archivo(obj, request=self.context.get('request'))
+
+    def get_url_descarga(self, obj):
+        return obtener_url_archivo(obj, request=self.context.get('request'), download=True)

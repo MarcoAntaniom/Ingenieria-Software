@@ -1,13 +1,17 @@
 import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useDropzone } from 'react-dropzone'
 import { toast } from 'sonner'
 import { useAuth } from '../../../contexts/auth-context'
 import { extractApiError } from '../../lib/pagination'
+import { queryKeys } from '../../lib/queryKeys'
 import { getUserRoleCode, ROLES } from '../../lib/roles'
 import {
+  downloadArchivo,
   formatFileSize,
   uploadArchivos,
 } from '../../../features/archivos/api/archivosApi'
+import ArchivoPreviewModal from '../../../features/archivos/components/ArchivoPreviewModal'
 
 const DEFAULT_ACCEPT = {
   'application/pdf': ['.pdf'],
@@ -42,12 +46,28 @@ export default function FileDropzoneUploader({
   compact = false,
 }) {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const roleCode = getUserRoleCode(user)
   const isStudent = roleCode === ROLES.ESTUDIANTE
   const canRemoveFiles = allowRemove !== undefined ? allowRemove && !isStudent : !isStudent
 
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [previewFile, setPreviewFile] = useState(null)
+  const [downloadingId, setDownloadingId] = useState(null)
+
+  async function handleDownloadFile(event, file) {
+    event.stopPropagation()
+    setDownloadingId(file.id ?? file.nombre_original)
+    try {
+      await downloadArchivo(file)
+      toast.success(`Descargando "${file.nombre_original}"...`)
+    } catch (error) {
+      toast.error(error?.message || 'No se pudo descargar el archivo.')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   const onDrop = useCallback(
     async (acceptedFiles, fileRejections) => {
@@ -76,6 +96,7 @@ export default function FileDropzoneUploader({
 
         onChangeUploadedFiles?.(nextFiles)
         onUploadComplete?.(createdRecords)
+        queryClient.invalidateQueries({ queryKey: queryKeys.archivos.all })
         toast.success(
           createdRecords.length === 1
             ? `Archivo "${createdRecords[0].nombre_original}" subido exitosamente.`
@@ -94,6 +115,7 @@ export default function FileDropzoneUploader({
       multiple,
       onChangeUploadedFiles,
       onUploadComplete,
+      queryClient,
       uploadedFiles,
     ],
   )
@@ -192,49 +214,88 @@ export default function FileDropzoneUploader({
             )}
           </div>
           <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
-            {uploadedFiles.map((file) => (
-              <div
-                className="flex items-center justify-between gap-3 px-3.5 py-2 text-xs"
-                key={file.id}
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="material-symbols-outlined text-lg text-secondary"
-                    aria-hidden="true"
-                  >
-                    attach_file
-                  </span>
-                  <div className="min-w-0">
-                    <a
-                      className="block truncate font-bold text-primary hover:underline"
-                      href={file.url_publica}
-                      rel="noreferrer"
-                      target="_blank"
+            {uploadedFiles.map((file) => {
+              const fileKey = file.id ?? file.nombre_original
+              const isThisDownloading = downloadingId === fileKey
+              return (
+                <div
+                  className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 text-xs"
+                  key={fileKey}
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="material-symbols-outlined shrink-0 text-lg text-secondary"
+                      aria-hidden="true"
                     >
-                      {file.nombre_original}
-                    </a>
-                    <span className="text-[10px] text-muted">
-                      {formatFileSize(file.peso_bytes)}
+                      attach_file
                     </span>
+                    <div className="min-w-0">
+                      <button
+                        className="block max-w-full truncate text-left font-bold text-primary hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPreviewFile(file)
+                        }}
+                        type="button"
+                      >
+                        {file.nombre_original}
+                      </button>
+                      <span className="text-[10px] text-muted">
+                        {formatFileSize(file.peso_bytes)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      className="inline-flex items-center gap-0.5 rounded-md border border-line bg-surface px-2 py-1 text-[11px] font-bold text-ink transition hover:bg-subtle"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setPreviewFile(file)
+                      }}
+                      title={`Ver ${file.nombre_original}`}
+                      type="button"
+                    >
+                      <span className="material-symbols-outlined text-xs">
+                        visibility
+                      </span>
+                      Ver
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-0.5 rounded-md bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary transition hover:bg-primary hover:text-white disabled:opacity-50"
+                      disabled={isThisDownloading}
+                      onClick={(e) => handleDownloadFile(e, file)}
+                      title={`Descargar ${file.nombre_original}`}
+                      type="button"
+                    >
+                      <span className="material-symbols-outlined text-xs">
+                        download
+                      </span>
+                      {isThisDownloading ? 'Descargando...' : 'Descargar'}
+                    </button>
+                    {canRemoveFiles && onChangeUploadedFiles && (
+                      <button
+                        aria-label={`Quitar ${file.nombre_original}`}
+                        className="rounded-lg p-1 text-muted hover:bg-rose-50 hover:text-danger"
+                        onClick={() => handleRemoveUploaded(file.id)}
+                        type="button"
+                      >
+                        <span className="material-symbols-outlined text-base">
+                          close
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
-                {canRemoveFiles && onChangeUploadedFiles && (
-                  <button
-                    aria-label={`Quitar ${file.nombre_original}`}
-                    className="rounded-lg p-1 text-muted hover:bg-rose-50 hover:text-danger"
-                    onClick={() => handleRemoveUploaded(file.id)}
-                    type="button"
-                  >
-                    <span className="material-symbols-outlined text-base">
-                      close
-                    </span>
-                  </button>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
+
+      <ArchivoPreviewModal
+        archivo={previewFile}
+        onClose={() => setPreviewFile(null)}
+      />
     </div>
   )
 }

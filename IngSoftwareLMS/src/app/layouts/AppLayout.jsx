@@ -65,6 +65,14 @@ export default function AppLayout() {
     { to: '/comunicacion', icon: 'forum', label: 'Comunicación y Foros' },
     { to: '/evaluaciones', icon: 'assignment', label: 'Evaluaciones y Tareas' },
     {
+      to: '/archivos',
+      icon: 'folder_open',
+      label:
+        roleCode === ROLES.ESTUDIANTE
+          ? 'Mis Archivos y Materiales'
+          : 'Archivos y Materiales',
+    },
+    {
       to: '/notificaciones',
       icon: 'notifications',
       label: 'Notificaciones',

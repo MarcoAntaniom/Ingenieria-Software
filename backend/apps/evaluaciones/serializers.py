@@ -217,20 +217,27 @@ class EntregaTareaEvaluacionSerializer(serializers.ModelSerializer):
             'es_tardia': self.get_es_tardia(obj),
         }
 
+    def _serializar_archivo_adjunto(self, archivo):
+        request = self.context.get('request')
+        tipo = getattr(archivo, 'tipo_archivo', None)
+        return {
+            'id': archivo.id,
+            'nombre_original': archivo.nombre_original,
+            'url_publica': obtener_url_archivo(archivo, request=request, download=False),
+            'url_descarga': obtener_url_archivo(archivo, request=request, download=True),
+            'peso_bytes': archivo.peso_bytes,
+            'extension': getattr(tipo, 'extension', None),
+            'mime_type': getattr(tipo, 'mime_type', None),
+            'creado_en': archivo.creado_en,
+        }
+
     def get_archivos_adjuntos(self, obj):
         estudiante_user_id = (
             obj.estudiante.usuario_id if obj.estudiante_id else None
         )
-        relaciones = obj.archivos_adjuntos.select_related('archivo').all()
+        relaciones = obj.archivos_adjuntos.select_related('archivo__tipo_archivo').all()
         return [
-            {
-                'id': rel.archivo.id,
-                'nombre_original': rel.archivo.nombre_original,
-                'url_publica': obtener_url_archivo(
-                    rel.archivo, request=self.context.get('request')
-                ),
-                'peso_bytes': rel.archivo.peso_bytes,
-            }
+            self._serializar_archivo_adjunto(rel.archivo)
             for rel in relaciones
             if rel.archivo_id
             and (
@@ -245,16 +252,9 @@ class EntregaTareaEvaluacionSerializer(serializers.ModelSerializer):
         )
         if estudiante_user_id is None:
             return []
-        relaciones = obj.archivos_adjuntos.select_related('archivo').all()
+        relaciones = obj.archivos_adjuntos.select_related('archivo__tipo_archivo').all()
         return [
-            {
-                'id': rel.archivo.id,
-                'nombre_original': rel.archivo.nombre_original,
-                'url_publica': obtener_url_archivo(
-                    rel.archivo, request=self.context.get('request')
-                ),
-                'peso_bytes': rel.archivo.peso_bytes,
-            }
+            self._serializar_archivo_adjunto(rel.archivo)
             for rel in relaciones
             if rel.archivo_id and rel.archivo.subido_por_id != estudiante_user_id
         ]

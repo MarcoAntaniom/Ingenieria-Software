@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { EmptyState, LoadingState } from '../../../shared/components/ui/StateViews'
 import FileDropzoneUploader from '../../../shared/components/ui/FileDropzoneUploader'
-import { formatFileSize } from '../../archivos/api/archivosApi'
+import ArchivoAttachmentList from '../../archivos/components/ArchivoAttachmentList'
 import { LATE_SUBMISSION_MAX_WAIT_MS } from '../api/evaluacionesApi'
 import ConfirmSubmitDeliveryModal from './ConfirmSubmitDeliveryModal'
 
@@ -184,57 +184,37 @@ export default function EntregasPanel({
               )}
 
               {entrega.archivos_adjuntos?.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-2">
-                  {entrega.archivos_adjuntos.map((file) => (
-                    <a
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-subtle"
-                      href={file.url_publica}
-                      key={file.id}
-                      onClick={() => {
-                        if (
-                          canGrade &&
-                          entrega.estado_codigo === 'ENVIADA' &&
-                          onMarkInReview
-                        ) {
-                          onMarkInReview(entrega.id)
-                        }
-                      }}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      <span className="material-symbols-outlined text-base text-secondary">
-                        attach_file
-                      </span>
-                      <span>{file.nombre_original}</span>
-                      <span className="text-[10px] font-normal text-muted">
-                        ({formatFileSize(file.peso_bytes)})
-                      </span>
-                    </a>
-                  ))}
+                <div className="mt-2.5 space-y-1.5">
+                  <p className="text-[11px] font-bold text-muted">
+                    {isStudent
+                      ? 'Tus archivos subidos:'
+                      : 'Archivos adjuntos de la entrega:'}
+                  </p>
+                  <ArchivoAttachmentList
+                    files={entrega.archivos_adjuntos}
+                    onBeforeAccess={() => {
+                      if (
+                        canGrade &&
+                        entrega.estado_codigo === 'ENVIADA' &&
+                        onMarkInReview
+                      ) {
+                        onMarkInReview(entrega.id)
+                      }
+                    }}
+                  />
                 </div>
               )}
 
               {entrega.archivos_retroalimentacion?.length > 0 && (
-                <div className="mt-2.5 space-y-1 rounded-lg border border-indigo-200 bg-indigo-50/70 p-2.5">
+                <div className="mt-2.5 space-y-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 p-2.5">
                   <p className="text-[11px] font-extrabold text-indigo-950">
                     Archivos corregidos adjuntados por el docente:
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {entrega.archivos_retroalimentacion.map((file) => (
-                      <a
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-white px-3 py-1 text-xs font-bold text-indigo-900 hover:bg-indigo-100"
-                        href={file.url_publica}
-                        key={file.id}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        <span className="material-symbols-outlined text-sm">
-                          rate_review
-                        </span>
-                        <span>{file.nombre_original}</span>
-                      </a>
-                    ))}
-                  </div>
+                  <ArchivoAttachmentList
+                    files={entrega.archivos_retroalimentacion}
+                    icon="rate_review"
+                    tone="indigo"
+                  />
                 </div>
               )}
 

@@ -227,7 +227,7 @@ class EntregaEvaluacionListCreateView(APIView):
         queryset = EntregaTarea.objects.select_related(
             'tarea__rubrica', 'estudiante__usuario', 'estado'
         ).prefetch_related(
-            'archivos_adjuntos__archivo',
+            'archivos_adjuntos__archivo__tipo_archivo',
             'evaluaciones_criterios__criterio',
             'evaluaciones_criterios__nivel_seleccionado',
         ).all().order_by('-fecha_envio')
@@ -374,7 +374,7 @@ class EntregaEvaluacionListCreateView(APIView):
         return Response(
             {
                 "mensaje": mensaje_exito,
-                "datos": EntregaTareaEvaluacionSerializer(entrega).data,
+                "datos": EntregaTareaEvaluacionSerializer(entrega, context={'request': request}).data,
             },
             status=status.HTTP_200_OK if entrega_existente else status.HTTP_201_CREATED,
         )
@@ -429,7 +429,7 @@ class ConfirmarEntregaDefinitivaView(APIView):
         return Response(
             {
                 "mensaje": "¡Entrega definitiva confirmada! Se ha emitido tu comprobante digital y la entrega ha quedado cerrada.",
-                "datos": EntregaTareaEvaluacionSerializer(entrega).data,
+                "datos": EntregaTareaEvaluacionSerializer(entrega, context={'request': request}).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -461,7 +461,7 @@ class MarcarEnRevisionEntregaView(APIView):
         return Response(
             {
                 "mensaje": "La entrega se encuentra ahora En Revisión.",
-                "datos": EntregaTareaEvaluacionSerializer(entrega).data,
+                "datos": EntregaTareaEvaluacionSerializer(entrega, context={'request': request}).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -493,7 +493,7 @@ class ReabrirEntregaView(APIView):
         return Response(
             {
                 "mensaje": "Entrega reabierta exitosamente para que el estudiante pueda realizar un nuevo envío.",
-                "datos": EntregaTareaEvaluacionSerializer(entrega).data,
+                "datos": EntregaTareaEvaluacionSerializer(entrega, context={'request': request}).data,
             },
             status=status.HTTP_200_OK,
         )
@@ -608,7 +608,7 @@ class CalificarEntregaView(APIView):
         return Response(
             {
                 "mensaje": "Calificación registrada y notificada al estudiante",
-                "datos": EntregaTareaEvaluacionSerializer(entrega).data,
+                "datos": EntregaTareaEvaluacionSerializer(entrega, context={'request': request}).data,
             },
             status=status.HTTP_200_OK,
         )
